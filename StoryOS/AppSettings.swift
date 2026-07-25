@@ -47,11 +47,11 @@ nonisolated enum AppAppearance: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var symbolName: String {
+    var glyph: Glyph {
         switch self {
-        case .light: "sun.max.fill"
-        case .dark: "moon.fill"
-        case .system: "circle.lefthalf.filled"
+        case .light: .light
+        case .dark: .dark
+        case .system: .systemAppearance
         }
     }
 

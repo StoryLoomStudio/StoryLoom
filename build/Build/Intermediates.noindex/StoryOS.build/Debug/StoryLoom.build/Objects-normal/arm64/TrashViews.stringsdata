@@ -94,7 +94,7 @@
         "comment": "",
         "key": "The record this connected is gone, so this cannot be put back.",
         "location": {
-          "startingColumn": 33,
+          "startingColumn": 38,
           "startingLine": 142
         }
       },
@@ -103,7 +103,7 @@
         "key": "Put Back",
         "location": {
           "startingColumn": 36,
-          "startingLine": 150
+          "startingLine": 151
         }
       },
       {
@@ -111,7 +111,7 @@
         "key": "Delete Permanently",
         "location": {
           "startingColumn": 36,
-          "startingLine": 154
+          "startingLine": 155
         }
       }
     ]

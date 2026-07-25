@@ -123,7 +123,7 @@ struct WorkspaceView: View {
                 Button {
                     workspace.isFocusMode = false
                 } label: {
-                    Label("Leave Focus", systemImage: "arrow.down.right.and.arrow.up.left")
+                    Label { Text("Leave Focus") } icon: { GlyphIcon(glyph: .leaveFocus, size: Icon.toolbar) }
                         .labelStyle(.iconOnly)
                 }
                 .buttonStyle(.plain)
@@ -187,21 +187,21 @@ struct WorkspaceView: View {
             Button {
                 sheet = .search
             } label: {
-                Label("Find in Project", systemImage: "magnifyingglass")
+                Label { Text("Find in Project") } icon: { GlyphIcon(glyph: .search, size: Icon.toolbar) }
             }
             .help("Find in project (⇧⌘F)")
 
             Button {
                 workspace.createScene()
             } label: {
-                Label("New Scene", systemImage: "square.and.pencil")
+                Label { Text("New Scene") } icon: { GlyphIcon(glyph: .newScene, size: Icon.toolbar) }
             }
             .help("New scene (⇧⌘N)")
 
             Button {
                 workspace.isInspectorVisible.toggle()
             } label: {
-                Label("Inspector", systemImage: "sidebar.trailing")
+                Label { Text("Inspector") } icon: { GlyphIcon(glyph: .inspector, size: Icon.toolbar) }
             }
             .help("Show or hide the inspector (⌥⌘I)")
             .disabled(workspace.library != .manuscript)
@@ -216,7 +216,7 @@ struct WorkspaceView: View {
                 Button("Reveal in Finder") { revealInFinder() }
                     .disabled(workspace.projectURL == nil)
             } label: {
-                Label("More", systemImage: "ellipsis.circle")
+                Label { Text("More") } icon: { GlyphIcon(glyph: .more, size: Icon.toolbar) }
             }
         }
     }
@@ -230,7 +230,7 @@ struct WorkspaceView: View {
         VStack(spacing: 0) {
             if workspace.externalChange != nil {
                 Banner(
-                    symbol: "exclamationmark.arrow.triangle.2.circlepath",
+                    glyph: .saving,
                     tint: Palette.caution,
                     title: "This project changed on disk",
                     message: "Something outside StoryLoom edited these files. Nothing has been overwritten."
@@ -242,7 +242,7 @@ struct WorkspaceView: View {
             }
             if let notice = workspace.recoveryNotice {
                 Banner(
-                    symbol: "clock.badge.exclamationmark",
+                    glyph: .interrupted,
                     tint: Palette.question,
                     title: "A previous save was interrupted",
                     message: notice
@@ -305,7 +305,7 @@ extension Notification.Name {
 // MARK: - Banner
 
 private struct Banner<Actions: View>: View {
-    let symbol: String
+    let glyph: Glyph
     let tint: Color
     let title: String
     let message: String
@@ -313,9 +313,8 @@ private struct Banner<Actions: View>: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: Space.snug) {
-            Image(systemName: symbol)
+            GlyphIcon(glyph: glyph, size: Icon.banner)
                 .foregroundStyle(tint)
-                .font(.system(size: 11))
 
             Text(title)
                 .font(Chrome.strong)

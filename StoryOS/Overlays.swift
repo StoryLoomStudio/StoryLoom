@@ -25,8 +25,7 @@ struct CommandPalette: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: Space.small) {
-                Image(systemName: "command")
-                    .font(.system(size: Icon.control))
+                GlyphIcon(glyph: .command, size: Icon.control)
                     .foregroundStyle(.tertiary)
 
                 TextField("Search everything, or run a command", text: $query)
@@ -45,7 +44,7 @@ struct CommandPalette: View {
 
             if entries.isEmpty {
                 EmptyStateView(
-                    symbol: "magnifyingglass",
+                    glyph: .search,
                     title: "Nothing matches",
                     message: "Try a name, a line of prose, or in:dialogue to search speech only."
                 )
@@ -112,7 +111,7 @@ struct CommandPalette: View {
                 id: "doc-\(document.id)",
                 title: document.displayTitle,
                 subtitle: document.chapterTitle,
-                icon: .system(document.kind.symbolName),
+                icon: document.kind.icon,
                 tint: document.kind.tint,
                 score: score + 4,
                 run: { workspace.navigate(to: .document(document.id, nil)) }
@@ -125,7 +124,7 @@ struct CommandPalette: View {
                 id: "entity-\(entity.id)",
                 title: entity.displayName,
                 subtitle: entity.kind.title,
-                icon: .system(entity.kind.symbolName),
+                icon: entity.kind.icon,
                 tint: entity.kind.tint,
                 score: score + 2,
                 run: { workspace.navigate(to: .entity(entity.id)) }
@@ -138,7 +137,7 @@ struct CommandPalette: View {
                 id: "event-\(event.id)",
                 title: event.displayTitle,
                 subtitle: event.chronologyLabel.isEmpty ? "Event" : event.chronologyLabel,
-                icon: .system("calendar"),
+                icon: .glyph(.calendar),
                 tint: event.certainty.tint,
                 score: score,
                 run: { workspace.navigate(to: .event(event.id)) }
@@ -151,7 +150,7 @@ struct CommandPalette: View {
                 id: "note-\(note.id)",
                 title: note.displayTitle,
                 subtitle: "Note",
-                icon: .system("note.text"),
+                icon: .glyph(.note),
                 tint: .orange,
                 score: score,
                 run: { workspace.navigate(to: .note(note.id)) }
@@ -197,33 +196,33 @@ struct CommandPalette: View {
 
     private var actions: [PaletteAction] {
         [
-            PaletteAction("New Scene", "create insert write", .system("square.and.pencil"), "⇧⌘N") { workspace.createScene() },
-            PaletteAction("Find in Project", "search text", .system("magnifyingglass"), "⇧⌘F") { sheet = .search },
-            PaletteAction("Save Project", "write persist", .system("arrow.down.doc"), "⌘S") { workspace.save() },
-            PaletteAction("Save a Point", "snapshot history recover", .system("clock.badge.checkmark"), nil) { workspace.createSnapshot() },
-            PaletteAction("Export…", "docx pdf markdown", .system("square.and.arrow.up"), "⇧⌘E") { sheet = .export },
+            PaletteAction("New Scene", "create insert write", .glyph(.newScene), "⇧⌘N") { workspace.createScene() },
+            PaletteAction("Find in Project", "search text", .glyph(.search), "⇧⌘F") { sheet = .search },
+            PaletteAction("Save Project", "write persist", .glyph(.saveProject), "⌘S") { workspace.save() },
+            PaletteAction("Save a Point", "snapshot history recover", .glyph(.savePoint), nil) { workspace.createSnapshot() },
+            PaletteAction("Export…", "docx pdf markdown", .glyph(.export), "⇧⌘E") { sheet = .export },
             PaletteAction(
                 workspace.isFocusMode ? "Leave Focus" : "Enter Focus",
                 "distraction free zen",
-                .system("arrow.up.left.and.arrow.down.right"),
+                .glyph(.enterFocus),
                 "⌥⌘F"
             ) { workspace.isFocusMode.toggle() },
             PaletteAction(
                 settings.typewriter ? "Turn Off Typewriter" : "Typewriter Scrolling",
                 "centre line",
-                .system("text.aligncenter"),
+                .glyph(.alignCentre),
                 nil
             ) { settings.typewriter.toggle() },
             PaletteAction(
                 settings.focusDepth == .off ? "Dim Everything But This Paragraph" : "Stop Dimming",
                 "focus concentrate",
-                .system("scope"),
+                .glyph(.focusDepth),
                 nil
             ) { settings.focusDepth = settings.focusDepth == .off ? .paragraph : .off },
             PaletteAction(
                 workspace.isInspectorVisible ? "Hide Inspector" : "Show Inspector",
                 "context sidebar",
-                .system("sidebar.trailing"),
+                .glyph(.inspector),
                 "⌥⌘I"
             ) { workspace.isInspectorVisible.toggle() },
         ]
@@ -419,8 +418,7 @@ struct SearchPanel: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: Space.small) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: Icon.control))
+                GlyphIcon(glyph: .search, size: Icon.control)
                     .foregroundStyle(.tertiary)
 
                 TextField("Search the manuscript and the story", text: $query)
@@ -449,7 +447,7 @@ struct SearchPanel: View {
                 SearchHelp()
             } else if hits.isEmpty {
                 EmptyStateView(
-                    symbol: "magnifyingglass",
+                    glyph: .search,
                     title: "No results",
                     message: "Nothing in the prose, the records, or the history matches that."
                 )
@@ -605,7 +603,7 @@ struct ExportPanel: View {
                     VStack(alignment: .leading, spacing: Space.snug) {
                         Picker("", selection: $profile.format) {
                             ForEach(ExportFormat.allCases) { format in
-                                Label(format.title, systemImage: format.symbolName).tag(format)
+                                Label { Text(format.title) } icon: { format.glyph.menuImage(size: Icon.control) }.tag(format)
                             }
                         }
                         .labelsHidden()
@@ -685,8 +683,7 @@ struct ExportPanel: View {
 
                 if !preview.hasConcerns {
                     HStack(spacing: Space.snug) {
-                        Image(systemName: "checkmark.circle")
-                            .font(.system(size: Icon.control))
+                        GlyphIcon(glyph: .saved, size: Icon.control)
                             .foregroundStyle(Palette.confirmed)
                         Text("Everything in the manuscript will be exported.")
                             .font(Chrome.body)

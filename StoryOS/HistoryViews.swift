@@ -35,7 +35,7 @@ struct SnapshotList: View {
                 Button {
                     workspace.createSnapshot()
                 } label: {
-                    Image(systemName: "plus")
+                    GlyphIcon(glyph: .plus, size: Icon.control)
                 }
                 .buttonStyle(.borderless)
                 .font(.system(size: 11, weight: .medium))
@@ -44,7 +44,7 @@ struct SnapshotList: View {
 
             if workspace.history.isEmpty {
                 EmptyStateView(
-                    symbol: "clock.arrow.circlepath",
+                    glyph: .revert,
                     title: "No save points yet",
                     message: workspace.projectURL == nil
                         ? "Save this project to disk and StoryLoom will start keeping history for you."
@@ -105,7 +105,7 @@ struct SnapshotDetail: View {
                         Button {
                             isConfirmingRestore = true
                         } label: {
-                            Label("Restore this version", systemImage: "arrow.counterclockwise")
+                            Label { Text("Restore this version") } icon: { GlyphIcon(glyph: .revert, size: Icon.control) }
                         }
                         .controlSize(.small)
                     }
@@ -180,7 +180,7 @@ struct SnapshotDetail: View {
                 }
             } else {
                 EmptyStateView(
-                    symbol: "clock.arrow.circlepath",
+                    glyph: .revert,
                     title: "No save point selected",
                     message: "Inspect a version before you decide to go back to it."
                 )

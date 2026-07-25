@@ -1,0 +1,58 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Xcode — user state
+xcuserdata/
+*.xcuserstate
+*.xcuserdatad/
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+
+# Xcode — build products
+build/
+DerivedData/
+*.o
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+Package.resolved
+
+# The Lucide source set.
+#
+# `icons/` is 1,756 SVGs, and only the handful actually used is vendored into
+# Assets.xcassets — which *is* committed, because the app cannot build without
+# it. Keeping the whole upstream set out of history means re-vendoring an icon
+# needs the download again; that is the intended trade, since the alternative is
+# a permanent 1,700-file diff for every icon change.
+#
+# Delete this line if you would rather have the palette to hand offline.
+icons/
+
+# Loose working copies of artwork that live in Assets.xcassets
+/*.svg
+*.psd
+
+# graphify
+#
+# graphify-out/ is *committed* on purpose — it is the map, and committing it
+# means everyone (and every assistant) starts with one instead of paying to
+# rebuild it. Only the local-only pieces are excluded.
+graphify-out/cost.json
+graphify-out/.graphify_*
+# Uncomment to keep the repo smaller at the cost of a slower first extract:
+# graphify-out/cache/
+
+# Scratch
+*.log
+*.tmp

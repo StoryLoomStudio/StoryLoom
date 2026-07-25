@@ -17,6 +17,9 @@
 //  legible, they come back where they were, and nothing leaves until somebody
 //  says so.
 //
+//  A deleted scene keeps its prose. That is the whole reason this exists: the
+//  words are the only thing in the project that cannot be rebuilt.
+//
 //  Snapshots are deliberately not trashable. They are already the undo history;
 //  an undo history with its own undo history is a hall of mirrors, and a snapshot
 //  is cheap to make again.
@@ -45,6 +48,7 @@ nonisolated struct TrashedItem: Identifiable, Codable, Equatable, Sendable {
     /// What it was called, so the row reads as the thing itself.
     var title: String {
         switch payload {
+        case .document(let value): value.displayTitle
         case .thread(let value): value.question.isEmpty ? "Untitled thread" : value.question
         case .entity(let value): value.displayName
         case .relationship(let value): value.summary.isEmpty ? "Relationship" : value.summary
@@ -56,6 +60,7 @@ nonisolated struct TrashedItem: Identifiable, Codable, Equatable, Sendable {
     /// Which room it will go back to.
     var category: String {
         switch payload {
+        case .document(let value): value.chapterTitle
         case .thread: "Thread"
         case .entity: "Story"
         case .relationship: "Relationship"
@@ -66,16 +71,18 @@ nonisolated struct TrashedItem: Identifiable, Codable, Equatable, Sendable {
 
     var icon: IconSource {
         switch payload {
+        case .document(let value): value.kind.icon
         case .thread(let value): value.kind.icon
-        case .entity(let value): .system(value.kind.symbolName)
-        case .relationship: .system("arrow.left.and.right")
-        case .event: .system("calendar")
-        case .note: .system("note.text")
+        case .entity(let value): value.kind.icon
+        case .relationship: .glyph(.relationshipEdge)
+        case .event: .glyph(.calendar)
+        case .note: .glyph(.note)
         }
     }
 
     var tint: Color {
         switch payload {
+        case .document(let value): value.kind.tint
         case .thread(let value): value.kind.tint
         case .entity(let value): value.kind.tint
         case .relationship: .secondary
@@ -90,6 +97,7 @@ nonisolated struct TrashedItem: Identifiable, Codable, Equatable, Sendable {
 /// An enum with associated values rather than a bag of optionals: it is not
 /// possible to construct one of these that is two things at once, or none.
 nonisolated enum TrashedPayload: Codable, Equatable, Sendable {
+    case document(StoryDocument)
     case thread(StoryThread)
     case entity(StoryEntity)
     case relationship(StoryRelationship)

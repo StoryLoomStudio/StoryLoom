@@ -49,12 +49,12 @@ nonisolated enum TextAlignmentChoice: String, Codable, CaseIterable, Identifiabl
         }
     }
 
-    var symbolName: String {
+    var glyph: Glyph {
         switch self {
-        case .natural: "text.alignleft"
-        case .centre: "text.aligncenter"
-        case .right: "text.alignright"
-        case .justified: "text.justify"
+        case .natural: .alignStart
+        case .centre: .alignCentre
+        case .right: .alignEnd
+        case .justified: .alignJustify
         }
     }
 

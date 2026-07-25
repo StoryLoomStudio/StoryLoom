@@ -104,10 +104,8 @@ private struct SaveIndicator: View {
         VStack(spacing: 0) {
             Divider()
             HStack(spacing: Space.snug) {
-                Image(systemName: workspace.persistence.symbolName)
-                    .font(.system(size: Icon.inline))
+                GlyphIcon(glyph: workspace.persistence.glyph, size: Icon.status)
                     .foregroundStyle(workspace.persistence.tint)
-                    .symbolEffect(.rotate, isActive: workspace.persistence == .saving)
 
                 Text(workspace.persistence.title)
                     .font(Chrome.small)
@@ -130,33 +128,46 @@ struct ManuscriptNavigator: View {
     @EnvironmentObject private var workspace: WorkspaceModel
     @State private var filter = ""
 
-    private var chapters: [StoryProject.Chapter] {
-        let documents = workspace.project.documents.filter { document in
-            filter.isEmpty
-                || document.title.localizedCaseInsensitiveContains(filter)
+    /// The manuscript with the filter applied, still grouped.
+    ///
+    /// Filtering builds a throwaway project and asks *it* for the grouping, so
+    /// a filtered outline is derived by exactly the same code as the real one.
+    /// A second grouping routine for the filtered case is how the two drift.
+    private var filtered: StoryProject {
+        guard !filter.isEmpty else { return workspace.project }
+        var project = workspace.project
+        project.documents = project.documents.filter { document in
+            document.title.localizedCaseInsensitiveContains(filter)
                 || document.text.localizedCaseInsensitiveContains(filter)
                 || document.chapter.localizedCaseInsensitiveContains(filter)
+                || document.volume.localizedCaseInsensitiveContains(filter)
         }
-        var project = workspace.project
-        project.documents = documents
-        return project.chapters
+        return project
     }
+
+    /// Dragging is off while a filter is on. The rows on screen are a subset, so
+    /// "move this above that" has no defined meaning against the real running
+    /// order — and guessing at one would quietly reorder scenes the author
+    /// cannot see. Clear the filter and the handles come back.
+    private var canReorder: Bool { filter.isEmpty }
 
     var body: some View {
         VStack(spacing: 0) {
             NavigatorBar(filter: $filter, prompt: "Filter scenes") {
-                Button {
-                    workspace.createScene()
+                Menu {
+                    Button("New Scene") { workspace.createScene() }
+                    Button("New Chapter") { workspace.createChapter() }
+                    Button("New Volume") { workspace.createVolume() }
                 } label: {
-                    Image(systemName: "plus")
+                    GlyphIcon(glyph: .plus, size: Icon.formatter)
                 }
-                .help("New scene (⇧⌘N)")
+                .help("Add to the manuscript (⇧⌘N for a scene)")
             }
 
-            if chapters.isEmpty {
+            if filtered.documents.isEmpty {
                 EmptyStateView(
-                    symbol: filter.isEmpty ? "book.closed" : "magnifyingglass",
-                    title: filter.isEmpty ? "No scenes yet" : "Nothing matches “\(filter)”",
+                    glyph: filter.isEmpty ? .manuscript : .search,
+                    title: filter.isEmpty ? "No scenes yet" : "Nothing matches \u{201C}\(filter)\u{201D}",
                     message: filter.isEmpty
                         ? "A manuscript starts with one scene. It does not have to be the first one."
                         : "Try another word, or clear the filter.",
@@ -165,15 +176,15 @@ struct ManuscriptNavigator: View {
                 )
             } else {
                 List(selection: $workspace.selectedDocumentID) {
-                    ForEach(chapters) { chapter in
-                        Section {
-                            ForEach(chapter.documents) { document in
-                                SceneRow(document: document, lands: document.landsThreadIDs.count)
-                                    .tag(document.id)
-                                    .contextMenu { menu(for: document) }
-                            }
-                        } header: {
-                            GroupHeader(title: chapter.title, detail: chapter.wordCount.formatted())
+                    if filtered.usesVolumes {
+                        ForEach(filtered.volumes) { volume in
+                            VolumeSection(volume: volume, canReorder: canReorder)
+                        }
+                    } else {
+                        // No volumes in this book: two tiers, and no row called
+                        // "Unassigned" wrapped around the whole manuscript.
+                        ForEach(filtered.chapters) { chapter in
+                            ChapterSection(chapter: chapter, canReorder: canReorder)
                         }
                     }
 
@@ -181,8 +192,7 @@ struct ManuscriptNavigator: View {
                         Section {
                             ForEach(workspace.project.archivedDocuments) { document in
                                 HStack(spacing: Space.snug) {
-                                    Image(systemName: "archivebox")
-                                        .font(.system(size: Icon.inline))
+                                    GlyphIcon(glyph: .archive, size: Icon.navigatorRow)
                                         .foregroundStyle(.tertiary)
                                     Text(document.displayTitle)
                                         .font(Chrome.body)
@@ -206,26 +216,118 @@ struct ManuscriptNavigator: View {
             }
         }
     }
+}
 
-    @ViewBuilder
-    private func menu(for document: StoryDocument) -> some View {
-        Button("Duplicate") { workspace.duplicate(document) }
-        Divider()
-        Button("Move Up") { workspace.move(document, by: -1) }
-            .disabled(!workspace.canMove(document, by: -1))
-        Button("Move Down") { workspace.move(document, by: 1) }
-            .disabled(!workspace.canMove(document, by: 1))
-        Divider()
-        Menu("Status") {
-            ForEach(DocumentStatus.allCases, id: \.self) { status in
-                Button(status.title) {
-                    workspace.selectedDocumentID = document.id
-                    workspace.updateStatus(status)
-                }
+// MARK: - Outline
+
+/// The menu on a scene. Shared by both tiers, so a scene offers the same actions
+/// wherever it is sitting.
+@ViewBuilder
+private func sceneMenu(_ document: StoryDocument, _ workspace: WorkspaceModel) -> some View {
+    Button("Duplicate") { workspace.duplicate(document) }
+    Divider()
+    Button("Move Up") { workspace.move(document, by: -1) }
+        .disabled(!workspace.canMove(document, by: -1))
+    Button("Move Down") { workspace.move(document, by: 1) }
+        .disabled(!workspace.canMove(document, by: 1))
+    Divider()
+    Menu("Status") {
+        ForEach(DocumentStatus.allCases, id: \.self) { status in
+            Button(status.title) {
+                workspace.selectedDocumentID = document.id
+                workspace.updateStatus(status)
             }
         }
-        Divider()
-        Button("Archive") { workspace.archive(document) }
+    }
+    Divider()
+    Button("Archive") { workspace.archive(document) }
+    // Destructive and last, with the system's own red. It goes to the trash, so
+    // the word "Delete" is not a lie about being irreversible.
+    Button("Delete", role: .destructive) { workspace.deleteDocument(document) }
+}
+
+/// A volume and the chapters under it.
+private struct VolumeSection: View {
+    let volume: StoryProject.Volume
+    let canReorder: Bool
+
+    @EnvironmentObject private var workspace: WorkspaceModel
+    @State private var isExpanded = true
+
+    var body: some View {
+        Section(isExpanded: $isExpanded) {
+            ForEach(volume.chapters) { chapter in
+                ChapterSection(chapter: chapter, canReorder: canReorder, indented: true)
+            }
+        } header: {
+            GroupHeader(title: volume.title, detail: volume.wordCount.formatted())
+                .contextMenu {
+                    Button("Add Chapter Here") { workspace.createChapter(in: volume.title) }
+                }
+        }
+    }
+}
+
+/// A chapter and its scenes. The scenes are what actually reorder.
+private struct ChapterSection: View {
+    let chapter: StoryProject.Chapter
+    let canReorder: Bool
+    var indented = false
+
+    @EnvironmentObject private var workspace: WorkspaceModel
+    @State private var isExpanded = true
+
+    /// `nil` disables the drag handles outright rather than accepting a drag and
+    /// silently doing nothing. The type has to be spelled out — a ternary between
+    /// a method reference and `nil` gives the compiler nothing to infer from.
+    private var reorderHandler: ((IndexSet, Int) -> Void)? {
+        guard canReorder else { return nil }
+        return { offsets, destination in move(offsets, to: destination) }
+    }
+
+    var body: some View {
+        Section(isExpanded: $isExpanded) {
+            rows
+        } header: {
+            header
+        }
+    }
+
+    private var rows: some View {
+        ForEach(chapter.documents) { document in
+            SceneRow(document: document, lands: document.landsThreadIDs.count)
+                .padding(.leading, indented ? Space.medium : 0)
+                .tag(document.id)
+                .contextMenu { sceneMenu(document, workspace) }
+        }
+        .onMove(perform: reorderHandler)
+    }
+
+    private var header: some View {
+        GroupHeader(title: chapter.title, detail: chapter.wordCount.formatted())
+            .padding(.leading, indented ? Space.small : 0)
+            .contextMenu {
+                Button("Add Scene Here") { workspace.createScene(in: chapter) }
+            }
+    }
+
+    /// `onMove` reports indices into *this chapter*. The manuscript is one flat
+    /// array, so both ends are translated into it before anything moves —
+    /// otherwise a drag inside chapter four would reorder chapter one.
+    private func move(_ offsets: IndexSet, to destination: Int) {
+        let ids = chapter.documents.map(\.id)
+        guard !ids.isEmpty else { return }
+        let all = workspace.project.documents.map(\.id)
+
+        let sources = IndexSet(offsets.compactMap { all.firstIndex(of: ids[$0]) })
+        let target: Int
+        if destination < ids.count {
+            target = all.firstIndex(of: ids[destination]) ?? all.count
+        } else {
+            // Dropped past the chapter's last row: land immediately after it.
+            target = all.firstIndex(of: ids[ids.count - 1]).map { $0 + 1 } ?? all.count
+        }
+        workspace.moveDocuments(sources, to: target)
     }
 }
 
@@ -247,8 +349,7 @@ private struct SceneRow: View {
     var body: some View {
         HStack(spacing: Space.snug) {
             if document.kind == .note {
-                Image(systemName: "note.text")
-                    .font(.system(size: Icon.inline))
+                GlyphIcon(glyph: .note, size: Icon.inline)
                     .foregroundStyle(.tertiary)
                     .frame(width: 6)
             } else {
@@ -263,7 +364,7 @@ private struct SceneRow: View {
             Spacer(minLength: Space.tight)
 
             if lands > 0 {
-                Image(systemName: ThreadRole.lands.symbolName)
+                GlyphIcon(glyph: ThreadRole.lands.glyph, size: Icon.inline)
                     .font(.system(size: Icon.hint))
                     .foregroundStyle(Palette.confirmed)
                     .help(lands == 1 ? "Lands a thread" : "Lands \(lands) threads")
@@ -301,7 +402,7 @@ struct EditorCanvas: View {
                 page(document)
             } else {
                 EmptyStateView(
-                    symbol: "book.closed",
+                    glyph: .manuscript,
                     title: "No scene selected",
                     message: "Choose a scene on the left, or start a new one.",
                     actionTitle: "New Scene",
@@ -392,8 +493,7 @@ private struct JumpBar: View {
             .foregroundStyle(.secondary)
             .frame(width: 104)
 
-            Image(systemName: "chevron.right")
-                .font(.system(size: Icon.hint, weight: .semibold))
+            GlyphIcon(glyph: .chevronRight, size: Icon.hint)
                 .foregroundStyle(.quaternary)
 
             QuietField(
@@ -498,16 +598,16 @@ private struct FormatBar: View {
     var body: some View {
         Strip {
             // Emphasis, in the order every word processor puts it.
-            FormatButton(symbol: InlineFormat.strong.symbolName, help: "Bold (⌘B)",
+            FormatButton(glyph: InlineFormat.strong.glyph, help: "Bold (⌘B)",
                          isActive: active.contains(.strong)) { workspace.toggleFormat(.strong) }
 
-            FormatButton(symbol: InlineFormat.emphasis.symbolName, help: "Italic (⌘I)",
+            FormatButton(glyph: InlineFormat.emphasis.glyph, help: "Italic (⌘I)",
                          isActive: active.contains(.emphasis)) { workspace.toggleFormat(.emphasis) }
 
-            FormatButton(symbol: "underline", help: "Underline (⌘U)",
+            FormatButton(glyph: .underline, help: "Underline (⌘U)",
                          isActive: worn.underline) { workspace.toggleUnderline() }
 
-            FormatButton(symbol: InlineFormat.strikethrough.symbolName, help: "Strikethrough (⇧⌘X)",
+            FormatButton(glyph: InlineFormat.strikethrough.glyph, help: "Strikethrough (⇧⌘X)",
                          isActive: active.contains(.strikethrough)) { workspace.toggleFormat(.strikethrough) }
 
             BarDivider()
@@ -520,28 +620,28 @@ private struct FormatBar: View {
                 Button("Heading 2") { workspace.setHeading(2) }
                 Button("Heading 3") { workspace.setHeading(3) }
             } label: {
-                Image(systemName: "textformat.size")
-                    .font(.system(size: Icon.control, weight: .medium))
+                Label { Text("Paragraph style") } icon: { Glyph.heading.menuImage(size: Icon.formatter) }
+                    .labelStyle(.iconOnly)
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
             .fixedSize()
             .help("Paragraph style")
 
-            FormatButton(symbol: "list.bullet", help: "Bulleted list") {
+            FormatButton(glyph: .list, help: "Bulleted list") {
                 workspace.toggleList(ordered: false)
             }
-            FormatButton(symbol: "list.number", help: "Numbered list") {
+            FormatButton(glyph: .listOrdered, help: "Numbered list") {
                 workspace.toggleList(ordered: true)
             }
-            FormatButton(symbol: "text.quote", help: "Quote") { workspace.toggleBlockquote() }
-            FormatButton(symbol: "asterisk", help: "Scene break (⇧⌘−)") { workspace.insertSceneBreak() }
+            FormatButton(glyph: .textQuote, help: "Quote") { workspace.toggleBlockquote() }
+            FormatButton(glyph: .asterisk, help: "Scene break (⇧⌘−)") { workspace.insertSceneBreak() }
 
             BarDivider()
 
             // Alignment.
             ForEach(TextAlignmentChoice.allCases) { choice in
-                FormatButton(symbol: choice.symbolName, help: choice.title,
+                FormatButton(glyph: choice.glyph, help: choice.title,
                              isActive: layer.alignment(at: workspace.editorSelection.range) == choice) {
                     workspace.setAlignment(choice)
                 }
@@ -560,8 +660,8 @@ private struct FormatBar: View {
                 Divider()
                 Button("None") { workspace.setHighlightColour(nil) }
             } label: {
-                Image(systemName: InlineFormat.highlight.symbolName)
-                    .font(.system(size: Icon.control, weight: .medium))
+                Label { Text("Highlight") } icon: { InlineFormat.highlight.glyph.menuImage(size: Icon.formatter) }
+                    .labelStyle(.iconOnly)
                     .foregroundStyle(worn.highlight?.swatch ?? Color.secondary)
             }
             .menuStyle(.borderlessButton)
@@ -579,8 +679,8 @@ private struct FormatBar: View {
                     Button(face.title) { workspace.setFace(face.font(size: 12).fontName) }
                 }
             } label: {
-                Image(systemName: "textformat")
-                    .font(.system(size: Icon.control, weight: .medium))
+                Label { Text("Font") } icon: { Glyph.fontFace.menuImage(size: Icon.formatter) }
+                    .labelStyle(.iconOnly)
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
@@ -595,8 +695,8 @@ private struct FormatBar: View {
                 }
             } label: {
                 HStack(spacing: Space.hair) {
-                    Image(systemName: "character")
-                        .font(.system(size: Icon.control, weight: .medium))
+                    Label { Text("Size") } icon: { Glyph.fontSize.menuImage(size: Icon.formatter) }
+                        .labelStyle(.iconOnly)
                     Text(worn.fontSize.map { "\(Int($0))" } ?? "—")
                         .font(Chrome.small)
                         .monospacedDigit()
@@ -609,7 +709,7 @@ private struct FormatBar: View {
 
             BarDivider()
 
-            FormatButton(symbol: "text.bubble", help: "Add comment (⌥⌘C)",
+            FormatButton(glyph: .comment, help: "Add comment (⌥⌘C)",
                          isEnabled: !workspace.editorSelection.isEmpty) {
                 workspace.addComment(range: workspace.editorSelection.range)
             }
@@ -617,7 +717,7 @@ private struct FormatBar: View {
             Spacer(minLength: Space.small)
 
             FormatButton(
-                symbol: settings.viewMode == .page ? "book.pages" : "doc.text",
+                glyph: settings.viewMode == .page ? .pageView : .continuousView,
                 help: settings.viewMode == .page ? "Switch to continuous view" : "Switch to page view",
                 isActive: settings.viewMode == .page
             ) {
@@ -625,7 +725,7 @@ private struct FormatBar: View {
             }
 
             FormatButton(
-                symbol: settings.appearance.symbolName,
+                glyph: settings.appearance.glyph,
                 help: "Appearance: \(settings.appearance.title) — click for \(settings.appearance.next.title)",
                 isActive: settings.appearance != .system
             ) {
@@ -637,7 +737,7 @@ private struct FormatBar: View {
 }
 
 private struct FormatButton: View {
-    let symbol: String
+    let glyph: Glyph
     let help: String
     var isActive = false
     var isEnabled = true
@@ -647,8 +747,7 @@ private struct FormatButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: Icon.control, weight: .medium))
+            GlyphIcon(glyph: glyph, size: Icon.formatter)
                 .frame(width: Icon.controlHit.width, height: Icon.controlHit.height)
                 .background {
                     RoundedRectangle(cornerRadius: Radius.control - 1, style: .continuous)
@@ -683,16 +782,15 @@ private struct TypeMenu: View {
     var body: some View {
         Button { open.toggle() } label: {
             HStack(spacing: Space.tight) {
-                Image(systemName: "textformat")
-                    .font(.system(size: Icon.control, weight: .medium))
+                Label { Text("Font") } icon: { Glyph.fontFace.menuImage(size: Icon.formatter) }
+                    .labelStyle(.iconOnly)
                 Text(settings.proseFace.title)
                     .font(Chrome.small)
                 Text("\(Int(settings.proseSize))")
                     .font(Chrome.small)
                     .monospacedDigit()
                     .foregroundStyle(.tertiary)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: Icon.hint, weight: .semibold))
+                GlyphIcon(glyph: .chevronDown, size: Icon.hint)
                     .foregroundStyle(.tertiary)
             }
             .foregroundStyle(.secondary)
@@ -900,9 +998,19 @@ private struct EditorStatusBar: View {
     @EnvironmentObject private var settings: AppSettings
     @State private var showingTargetPopover = false
 
-    private var sceneProgress: Double {
-        guard document.targetWordCount > 0 else { return 0 }
-        return min(1.0, Double(document.wordCount) / Double(document.targetWordCount))
+    /// The book, not the page.
+    ///
+    /// This line used to read "Scene Goal: 100%", and a scene goal is the wrong
+    /// number to leave on screen all day. It is satisfied constantly — every
+    /// short scene hits it — so it stops carrying information by the third
+    /// chapter, and worse, it invites writing *to a length* rather than to the
+    /// end of the scene. The project target is the number a novelist actually
+    /// wants at a glance: how much book there is. The scene's own target is
+    /// still here, one click away in the popover, for the people who use it.
+    private var projectProgress: Double {
+        let target = workspace.project.story.projectWordTarget
+        guard target > 0 else { return 0 }
+        return min(1.0, Double(workspace.project.totalWordCount) / Double(target))
     }
 
     var body: some View {
@@ -925,18 +1033,17 @@ private struct EditorStatusBar: View {
                 showingTargetPopover.toggle()
             } label: {
                 HStack(spacing: Space.snug) {
-                    Image(systemName: "target")
-                        .font(.system(size: Icon.inline))
-                    Text("Scene Goal: \(Int(sceneProgress * 100))%")
+                    GlyphIcon(glyph: .goal, size: Icon.status)
+                    Text("\(workspace.project.totalWordCount.formatted()) of \(workspace.project.story.projectWordTarget.formatted())")
                         .monospacedDigit()
-                    ProgressView(value: sceneProgress)
+                    ProgressView(value: projectProgress)
                         .progressViewStyle(.linear)
                         .frame(width: 36)
                 }
                 .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help("Set scene and project targets")
+            .help("Project target — click to change it, and this scene's")
             .popover(isPresented: $showingTargetPopover, arrowEdge: .bottom) {
                 TargetPopoverView(document: document, projectTarget: workspace.project.story.projectWordTarget)
             }
@@ -944,12 +1051,12 @@ private struct EditorStatusBar: View {
             Spacer(minLength: Space.small)
 
             if settings.typewriter {
-                Image(systemName: "text.aligncenter")
+                GlyphIcon(glyph: .alignCentre, size: Icon.control)
                     .foregroundStyle(.secondary)
                     .help("Typewriter scrolling")
             }
             if settings.focusDepth != .off {
-                Image(systemName: "scope")
+                GlyphIcon(glyph: .focusDepth, size: Icon.control)
                     .foregroundStyle(.secondary)
                     .help("Dimming everything but the \(settings.focusDepth.title.lowercased())")
             }
@@ -959,7 +1066,7 @@ private struct EditorStatusBar: View {
                 Button {
                     workspace.isInspectorVisible = true
                 } label: {
-                    Label("\(open)", systemImage: "text.bubble")
+                    Label { Text("\(open)") } icon: { GlyphIcon(glyph: .comment, size: Icon.inline) }
                         .monospacedDigit()
                 }
                 .buttonStyle(.plain)
@@ -1026,7 +1133,7 @@ struct InspectorPane: View {
                 }
             } else {
                 EmptyStateView(
-                    symbol: "sidebar.trailing",
+                    glyph: .inspector,
                     title: "Nothing selected",
                     message: "The inspector describes whatever scene you are in."
                 )
@@ -1111,7 +1218,7 @@ struct InspectorPane: View {
                     ForEach(mentioned) { entity in
                         Chip(
                             text: entity.displayName,
-                            symbol: entity.kind.symbolName,
+                            icon: entity.kind.icon,
                             tint: entity.kind.tint
                         ) {
                             workspace.navigate(to: .entity(entity.id))
@@ -1227,7 +1334,7 @@ private struct ThreadLinks: View {
                             }
                         }
                     } label: {
-                        Label("Link", systemImage: "link")
+                        Label { Text("Link") } icon: { Glyph.link.menuImage(size: Icon.formatter) }
                     }
                     .menuStyle(.borderlessButton)
                     .menuIndicator(.hidden)
@@ -1236,7 +1343,7 @@ private struct ThreadLinks: View {
                     Button {
                         workspace.openThreadHere()
                     } label: {
-                        Label("Open a new one", systemImage: "plus")
+                        Label { Text("Open a new one") } icon: { Glyph.plus.menuImage(size: Icon.formatter) }
                     }
                     .buttonStyle(.link)
                     .help("Create a thread this scene opens (⇧⌘T)")
@@ -1279,8 +1386,7 @@ private struct ThreadLinks: View {
                     workspace.setThreadRole(nil, forThread: id, in: document.id)
                 }
             } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: Icon.inline))
+                GlyphIcon(glyph: .ellipsis, size: Icon.inline)
                     .foregroundStyle(.tertiary)
             }
             .menuStyle(.borderlessButton)
@@ -1316,8 +1422,7 @@ private struct CommentRow: View {
                 .disabled(isOrphaned)
 
                 if isOrphaned {
-                    Image(systemName: "link.badge.plus")
-                        .font(.system(size: Icon.inline))
+                    GlyphIcon(glyph: .linkAdd, size: Icon.inline)
                         .foregroundStyle(Palette.caution)
                         .help("The words this was attached to are gone")
                 }
@@ -1329,8 +1434,7 @@ private struct CommentRow: View {
                     Divider()
                     Button("Delete", role: .destructive) { workspace.deleteComment(comment.id) }
                 } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: Icon.inline))
+                    GlyphIcon(glyph: .ellipsis, size: Icon.inline)
                         .foregroundStyle(.tertiary)
                 }
                 .menuStyle(.borderlessButton)

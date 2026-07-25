@@ -78,7 +78,7 @@
         "comment": "",
         "key": "%lld scenes and %@ words have passed since anything moved this.",
         "location": {
-          "startingColumn": 21,
+          "startingColumn": 26,
           "startingLine": 262
         }
       },
@@ -87,7 +87,7 @@
         "key": "No scene touches this yet. Open a scene and link it in the inspector.",
         "location": {
           "startingColumn": 26,
-          "startingLine": 282
+          "startingLine": 283
         }
       },
       {
@@ -95,7 +95,7 @@
         "key": "No scene lands this. The reader is still holding it.",
         "location": {
           "startingColumn": 22,
-          "startingLine": 358
+          "startingLine": 359
         }
       }
     ]

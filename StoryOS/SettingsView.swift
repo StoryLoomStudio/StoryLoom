@@ -14,11 +14,11 @@ struct SettingsView: View {
     var body: some View {
         TabView {
             PageSettings()
-                .tabItem { Label("Page", systemImage: "doc.richtext") }
+                .tabItem { Label { Text("Page") } icon: { Glyph.richTextFile.menuImage(size: Icon.control) } }
             CompositionSettings()
-                .tabItem { Label("Writing", systemImage: "pencil.and.scribble") }
+                .tabItem { Label { Text("Writing") } icon: { Glyph.annotate.menuImage(size: Icon.control) } }
             GeneralSettings()
-                .tabItem { Label("General", systemImage: "gearshape") }
+                .tabItem { Label { Text("General") } icon: { Glyph.settings.menuImage(size: Icon.control) } }
         }
         .frame(width: 560, height: 460)
     }
@@ -186,8 +186,7 @@ private struct GeneralSettings: View {
                 } else {
                     ForEach(recents.entries) { entry in
                         HStack(alignment: .center, spacing: Space.medium) {
-                            Image(systemName: "folder")
-                                .font(.system(size: Icon.control))
+                            GlyphIcon(glyph: .folder, size: Icon.control)
                                 .foregroundStyle(.secondary)
 
                             VStack(alignment: .leading, spacing: 2) {
@@ -203,8 +202,7 @@ private struct GeneralSettings: View {
                             Button {
                                 recents.forget(entry)
                             } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: Icon.control))
+                                GlyphIcon(glyph: .clear, size: Icon.control)
                                     .foregroundStyle(.tertiary)
                             }
                             .buttonStyle(.plain)

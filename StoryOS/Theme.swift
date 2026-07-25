@@ -86,11 +86,43 @@ enum Icon {
     /// next to the text rather than as marks belonging to it.
     static let threadKind: CGFloat = 14
 
+    // MARK: Per-surface sizes
+    //
+    // Every icon in the application is drawn at one of the numbers below, and
+    // each surface has its own so it can be tuned without dragging the others
+    // with it. They are *seeded* from the scale above rather than repeating it,
+    // so changing `control` still moves the family; overwrite any one of them
+    // with a literal to break it out on its own.
+    //
+    // Nothing outside this file should pass a bare number to an icon view.
+
+    /// The format bar: bold, italic, alignment, the lot.
+    static let formatter: CGFloat = control
+    /// The window toolbar, top right.
+    static let toolbar: CGFloat = control + 1
+    /// Beside a row in a navigator or list.
+    static let navigatorRow: CGFloat = inline
+    /// The save indicator and the editor's status line.
+    static let status: CGFloat = inline
+    /// The mark on an interrupting banner.
+    static let banner: CGFloat = 11
+    /// A chip — a mentioned record, a participant.
+    static let chip: CGFloat = inline
+    /// The one decorative symbol, on an empty state.
+    static let emptyState: CGFloat = display
+    /// The two big doors on the start screen.
+    static let startAction: CGFloat = 19
+    /// A disclosure triangle in the manuscript outline.
+    static let disclosure: CGFloat = hint
+
     /// Lucide draws on a 24pt grid and fills nearly all of it, where an SF Symbol
     /// leaves optical margin inside its own box. Set to the same point size the
     /// two are not the same weight — the Lucide glyph reads a size larger and a
     /// shade heavier. This is the correction, applied in one place so the type
     /// scale above never has to be bent around whichever icon set is in use.
+    ///
+    /// It multiplies every size above, so it is the one knob that moves all of
+    /// the vendored artwork at once.
     static let lucideScale: CGFloat = 0.88
 }
 
@@ -124,7 +156,102 @@ enum Glyph: String, Hashable, Sendable {
     case conflict = "swords"
     case theme = "lightbulb"
 
+    // Marking up a passage
+    case bold
+    case italic
+    case underline
+    case strikethrough
+    case highlighter
+    case heading
+    case list
+    case listOrdered = "list-ordered"
+    case textQuote = "text-quote"
+    case asterisk
+
+    // Setting it on the page
+    case alignStart = "text-align-start"
+    case alignCentre = "text-align-center"
+    case alignEnd = "text-align-end"
+    case alignJustify = "text-align-justify"
+    case fontFace = "type"
+    case fontSize = "a-large-small"
+    case comment = "message-square-text"
+    case pageView = "book-open"
+    case continuousView = "scroll-text"
+
+    // How the application looks
+    case light = "sun"
+    case dark = "moon"
+    case systemAppearance = "contrast"
+
+    // Chrome
     case search
+    case plus
+    case note = "notebook-text"
+    case newScene = "square-pen"
+    case inspector = "panel-right"
+    case more = "circle-ellipsis"
+    case folder
+    case newProject = "folder-plus"
+    case settings
+    case filter = "list-filter"
+    case chevronRight = "chevron-right"
+    case chevronDown = "chevron-down"
+    case clear = "circle-x"
+    case ellipsis
+    case command
+    case remove = "circle-minus"
+
+    // Whether the work is safe
+    case unsaved = "circle-dashed"
+    case loading = "circle-arrow-down"
+    case saving = "refresh-cw"
+    case saved = "circle-check"
+    case interrupted = "clock-alert"
+    case savePoint = "clock-check"
+    case revert = "rotate-ccw"
+    case archive
+    case saveProject = "save"
+
+    // The story's own furniture
+    case calendar
+    case chronology = "calendar-range"
+    case link
+    case linkAdd = "link-2"
+    case annotate = "pen-line"
+    case relationshipEdge = "arrow-left-right"
+    case character = "user"
+    case location = "map-pin"
+    case object = "box"
+    case organization = "building-2"
+    case symbolMotif = "bookmark"
+    case themeMotif = "drama"
+
+    // Leaving the building
+    case export = "share"
+    case markdownFile = "code-xml"
+    case plainTextFile = "file-text"
+    case richTextFile = "file-type"
+    case pdfFile = "file-scan"
+    case wordFile = "file-down"
+    case focusDepth = "crosshair"
+    case enterFocus = "maximize-2"
+    case leaveFocus = "minimize-2"
+
+    // States a thread, an event, or a finding can be in
+    case circle
+    case circleDot = "circle-dot"
+    case circleOff = "circle-off"
+    case blessed = "badge-check"
+    case advances = "arrow-right"
+    case severe = "octagon-alert"
+
+    // How two records stand to one another
+    case family = "users"
+    case loves = "heart"
+    case opposes = "zap"
+    case conceals = "eye-off"
+    case unspecified = "slash"
 }
 
 /// Where an icon comes from: the system's symbol set, or ours.

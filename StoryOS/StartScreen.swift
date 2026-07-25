@@ -43,14 +43,14 @@ struct StartScreen: View {
                 StartAction(
                     title: "New Project…",
                     detail: "A folder of Markdown, readable in twenty years.",
-                    symbol: "plus.rectangle.on.folder",
+                    glyph: .newProject,
                     isProminent: true
                 ) { workspace.newProject() }
 
                 StartAction(
                     title: "Open Project…",
                     detail: "An existing StoryLoom project folder.",
-                    symbol: "folder"
+                    glyph: .folder
                 ) { workspace.openProject() }
             }
             .padding(.top, Space.section)
@@ -191,7 +191,7 @@ struct StartScreen: View {
 private struct StartAction: View {
     let title: String
     let detail: String
-    let symbol: String
+    let glyph: Glyph
     var isProminent = false
     let action: () -> Void
 
@@ -204,8 +204,7 @@ private struct StartAction: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: Space.regular) {
-                Image(systemName: symbol)
-                    .font(.system(size: 19, weight: .regular))
+                GlyphIcon(glyph: glyph, size: Icon.startAction)
                     .foregroundStyle(isProminent ? AnyShapeStyle(tint) : AnyShapeStyle(.secondary))
                     .frame(width: 32)
 
@@ -221,8 +220,7 @@ private struct StartAction: View {
 
                 Spacer(minLength: 0)
 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: Icon.hint, weight: .semibold))
+                GlyphIcon(glyph: .chevronRight, size: Icon.hint)
                     .foregroundStyle(hovering ? AnyShapeStyle(.secondary) : AnyShapeStyle(.quaternary))
             }
             .padding(.vertical, Space.regular + 2)

@@ -53,12 +53,12 @@ nonisolated enum InlineFormat: String, CaseIterable, Sendable {
         }
     }
 
-    var symbolName: String {
+    var glyph: Glyph {
         switch self {
-        case .emphasis: "italic"
-        case .strong: "bold"
-        case .highlight: "highlighter"
-        case .strikethrough: "strikethrough"
+        case .emphasis: .italic
+        case .strong: .bold
+        case .highlight: .highlighter
+        case .strikethrough: .strikethrough
         }
     }
 

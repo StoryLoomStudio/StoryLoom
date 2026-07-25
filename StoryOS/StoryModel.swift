@@ -70,6 +70,33 @@ nonisolated struct StoryProject: Codable, Equatable, Sendable {
         }
     }
 
+    /// True once any scene claims a volume. Until then the outline has two
+    /// tiers, not three, and says nothing about a level the book does not use.
+    var usesVolumes: Bool {
+        documents.contains { !$0.volumeTitle.isEmpty }
+    }
+
+    /// The manuscript as Volume → Chapter → Scene.
+    ///
+    /// Grouped by contiguity at both levels, for the same reason chapters are:
+    /// the array *is* the running order, and a book where "Part Two" appears,
+    /// gives way to an interlude, and then resumes is a book, not a mistake to
+    /// be tidied. Sorting by title would silently reorder the manuscript.
+    var volumes: [Volume] {
+        chapters.reduce(into: []) { groups, chapter in
+            let title = chapter.documents.first?.volumeTitle ?? ""
+            if let last = groups.last, last.title == title {
+                groups[groups.count - 1] = Volume(
+                    id: last.id,
+                    title: title,
+                    chapters: last.chapters + [chapter]
+                )
+            } else {
+                groups.append(Volume(id: chapter.id, title: title, chapters: [chapter]))
+            }
+        }
+    }
+
     func document(_ id: StoryDocument.ID) -> StoryDocument? {
         documents.first { $0.id == id } ?? archivedDocuments.first { $0.id == id }
     }
@@ -94,6 +121,19 @@ nonisolated struct StoryProject: Codable, Equatable, Sendable {
 
         var wordCount: Int { documents.reduce(0) { $0 + $1.wordCount } }
     }
+
+    /// A part, a book-within-a-book — whatever the author calls the tier above
+    /// chapters. Derived, never stored: the only durable fact is the `volume`
+    /// string on each scene, so there is no separate list of volumes to fall out
+    /// of step with the manuscript.
+    nonisolated struct Volume: Identifiable, Hashable, Sendable {
+        let id: UUID
+        let title: String
+        let chapters: [Chapter]
+
+        var documents: [StoryDocument] { chapters.flatMap(\.documents) }
+        var wordCount: Int { chapters.reduce(0) { $0 + $1.wordCount } }
+    }
 }
 
 // MARK: - Document
@@ -115,6 +155,13 @@ nonisolated struct StoryProject: Codable, Equatable, Sendable {
 nonisolated struct StoryDocument: Identifiable, Codable, Hashable, Sendable {
     var id = UUID()
     var title: String
+    /// The part of the book this belongs to, above the chapter.
+    ///
+    /// Empty is the normal case and means "this book does not have volumes" —
+    /// most novels do not, and an outline that forces one is an outline that
+    /// makes every writer invent a name for a level they are not using. The
+    /// navigator only draws the volume tier when at least one scene names one.
+    var volume: String = ""
     var chapter: String
     var kind: DocumentKind
     var text: String
@@ -159,6 +206,7 @@ nonisolated struct StoryDocument: Identifiable, Codable, Hashable, Sendable {
     nonisolated init(
         id: UUID = UUID(),
         title: String,
+        volume: String = "",
         chapter: String,
         kind: DocumentKind,
         text: String,
@@ -177,6 +225,7 @@ nonisolated struct StoryDocument: Identifiable, Codable, Hashable, Sendable {
     ) {
         self.id = id
         self.title = title
+        self.volume = volume
         self.chapter = chapter
         self.kind = kind
         self.text = text
@@ -195,7 +244,7 @@ nonisolated struct StoryDocument: Identifiable, Codable, Hashable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, title, chapter, kind, text
+        case id, title, volume, chapter, kind, text
         case intention, turn, withheld, residue
         case opensThreadIDs, advancesThreadIDs, landsThreadIDs
         case status, pov, location, targetWordCount, preservedFrontMatter
@@ -205,6 +254,7 @@ nonisolated struct StoryDocument: Identifiable, Codable, Hashable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         title = try container.decode(String.self, forKey: .title)
+        volume = try container.decodeIfPresent(String.self, forKey: .volume) ?? ""
         chapter = try container.decode(String.self, forKey: .chapter)
         kind = try container.decode(DocumentKind.self, forKey: .kind)
         text = try container.decode(String.self, forKey: .text)
@@ -225,6 +275,14 @@ nonisolated struct StoryDocument: Identifiable, Codable, Hashable, Sendable {
     var chapterTitle: String {
         let trimmed = chapter.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? "Unassigned" : trimmed
+    }
+
+    /// Empty when this scene is not in a volume — distinct from `chapterTitle`,
+    /// which invents "Unassigned" because a scene must sit somewhere in the
+    /// outline. A book with no volumes should show no volume tier at all rather
+    /// than a row called "Unassigned" wrapped around the whole manuscript.
+    var volumeTitle: String {
+        volume.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     var displayTitle: String {
@@ -283,12 +341,14 @@ nonisolated enum DocumentKind: String, Codable, CaseIterable, Hashable, Sendable
 
     var title: String { rawValue.capitalized }
 
-    var symbolName: String {
+    var glyph: Glyph {
         switch self {
-        case .scene: "text.alignleft"
-        case .note: "note.text"
+        case .scene: .alignStart
+        case .note: .note
         }
     }
+
+    var icon: IconSource { .glyph(glyph) }
 
     var tint: Color {
         switch self {

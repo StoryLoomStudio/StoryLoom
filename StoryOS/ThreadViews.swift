@@ -48,7 +48,7 @@ struct ThreadList: View {
                         }
                     }
                 } label: {
-                    Image(systemName: "plus")
+                    GlyphIcon(glyph: .plus, size: Icon.control)
                 }
                 .help("Open a new thread")
             }
@@ -182,7 +182,7 @@ struct ThreadCanvas: View {
             .background(Color(nsColor: .textBackgroundColor))
         } else {
             EmptyStateView(
-                symbol: "questionmark.diamond",
+                glyph: .mystery,
                 title: "No thread selected",
                 message: "Choose a question on the left, or open a new one.",
                 actionTitle: "Open a Thread",
@@ -219,7 +219,7 @@ private struct ThreadStrip: View {
             Text("·")
                 .foregroundStyle(.quaternary)
 
-            Label(arc.state.title, systemImage: arc.state.symbolName)
+            Label { Text(arc.state.title) } icon: { GlyphIcon(glyph: arc.state.glyph, size: Icon.inline) }
                 .font(Chrome.small)
                 .foregroundStyle(arc.state.tint)
 
@@ -258,10 +258,11 @@ private struct QuestionBlock: View {
             )
 
             if arc.state == .cooling {
-                Label(
-                    "\(arc.scenesSinceProgress) scenes and \(arc.wordsSinceProgress.formatted()) words have passed since anything moved this.",
-                    systemImage: "clock.badge.exclamationmark"
-                )
+                Label {
+                    Text("\(arc.scenesSinceProgress) scenes and \(arc.wordsSinceProgress.formatted()) words have passed since anything moved this.")
+                } icon: {
+                    GlyphIcon(glyph: .interrupted, size: Icon.inline)
+                }
                 .font(Chrome.meta)
                 .foregroundStyle(Palette.caution)
                 .fixedSize(horizontal: false, vertical: true)
@@ -310,7 +311,7 @@ private struct BeatRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: Space.small) {
             ThreadLine(
-                symbol: beat.role.symbolName,
+                glyph: beat.role.glyph,
                 tint: AnyShapeStyle(beat.role == .lands ? Palette.confirmed : Color.secondary),
                 isFirst: isFirst,
                 isLast: isLast
@@ -352,7 +353,7 @@ private struct BeatRow: View {
 private struct OwedRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: Space.small) {
-            ThreadLine(symbol: "circle.dotted", tint: AnyShapeStyle(.tertiary), isFirst: false, isLast: true)
+            ThreadLine(glyph: .circleOff, tint: AnyShapeStyle(.tertiary), isFirst: false, isLast: true)
 
             HStack(alignment: .firstTextBaseline, spacing: Space.small) {
                 Text("No scene lands this. The reader is still holding it.")
@@ -371,7 +372,7 @@ private struct OwedRow: View {
 /// it. The only ornament in the application, and it earns its place by being the
 /// thing the room is named after.
 private struct ThreadLine: View {
-    let symbol: String
+    let glyph: Glyph
     let tint: AnyShapeStyle
     let isFirst: Bool
     let isLast: Bool
@@ -381,8 +382,7 @@ private struct ThreadLine: View {
             Rectangle()
                 .fill(isFirst ? .clear : Palette.thread)
                 .frame(width: 1, height: 5)
-            Image(systemName: symbol)
-                .font(.system(size: Icon.inline, weight: .medium))
+            GlyphIcon(glyph: glyph, size: Icon.inline)
                 .foregroundStyle(tint)
                 .frame(width: 12, height: 12)
             Rectangle()

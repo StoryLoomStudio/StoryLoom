@@ -39,7 +39,7 @@ struct TrashList: View {
 
             if items.isEmpty {
                 EmptyStateView(
-                    symbol: "trash",
+                    glyph: .trash,
                     title: "Nothing in the trash",
                     message: "Records, threads, events and notes you delete wait here until you empty it."
                 )
@@ -80,7 +80,7 @@ private struct TrashRow: View {
 
     var body: some View {
         HStack(spacing: Space.snug) {
-            IconView(item.icon, size: Icon.inline)
+            IconView(item.icon, size: Icon.navigatorRow)
                 .foregroundStyle(item.tint)
 
             Text(item.title)
@@ -127,7 +127,7 @@ struct TrashDetail: View {
 
                     VStack(alignment: .leading, spacing: Space.regular) {
                         HStack(spacing: Space.small) {
-                            IconView(item.icon, size: Icon.display)
+                            IconView(item.icon, size: Icon.emptyState)
                                 .foregroundStyle(item.tint)
 
                             Text(item.title)
@@ -138,10 +138,11 @@ struct TrashDetail: View {
                         if !workspace.canRestore(item) {
                             // Said plainly and up front, rather than by disabling a
                             // button and leaving the author to guess why.
-                            Label(
-                                "The record this connected is gone, so this cannot be put back.",
-                                systemImage: "exclamationmark.triangle"
-                            )
+                            Label {
+                                Text("The record this connected is gone, so this cannot be put back.")
+                            } icon: {
+                                GlyphIcon(glyph: .threat, size: Icon.inline)
+                            }
                             .font(Chrome.small)
                             .foregroundStyle(.secondary)
                         }
@@ -161,7 +162,7 @@ struct TrashDetail: View {
                 }
             } else {
                 EmptyStateView(
-                    symbol: "trash",
+                    glyph: .trash,
                     title: "Nothing selected",
                     message: "Choose something on the left to put it back or delete it for good."
                 )

@@ -1,30 +1,23 @@
 {
-  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Markdown/BlockParser.swift" : {
-    "const-values" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/BlockParser.swiftconstvalues",
-    "dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/BlockParser.d",
-    "diagnostics" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/BlockParser.dia",
-    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/BlockParser.o",
-    "swift-dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/BlockParser.swiftdeps"
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/AppSettings.swift" : {
+    "const-values" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/AppSettings.swiftconstvalues",
+    "dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/AppSettings.d",
+    "diagnostics" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/AppSettings.dia",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/AppSettings.o",
+    "swift-dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/AppSettings.swiftdeps"
   },
-  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Markdown/HTMLToMarkdownConverter.swift" : {
-    "const-values" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/HTMLToMarkdownConverter.swiftconstvalues",
-    "dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/HTMLToMarkdownConverter.d",
-    "diagnostics" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/HTMLToMarkdownConverter.dia",
-    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/HTMLToMarkdownConverter.o",
-    "swift-dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/HTMLToMarkdownConverter.swiftdeps"
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Components.swift" : {
+    "const-values" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/Components.swiftconstvalues",
+    "dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/Components.d",
+    "diagnostics" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/Components.dia",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/Components.o",
+    "swift-dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/Components.swiftdeps"
   },
-  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Markdown/InlineParser.swift" : {
-    "const-values" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/InlineParser.swiftconstvalues",
-    "dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/InlineParser.d",
-    "diagnostics" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/InlineParser.dia",
-    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/InlineParser.o",
-    "swift-dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/InlineParser.swiftdeps"
-  },
-  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Markdown/MarkdownAST.swift" : {
-    "const-values" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/MarkdownAST.swiftconstvalues",
-    "dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/MarkdownAST.d",
-    "diagnostics" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/MarkdownAST.dia",
-    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/MarkdownAST.o",
-    "swift-dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/MarkdownAST.swiftdeps"
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/ExportService.swift" : {
+    "const-values" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/ExportService.swiftconstvalues",
+    "dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/ExportService.d",
+    "diagnostics" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/ExportService.dia",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/ExportService.o",
+    "swift-dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/ExportService.swiftdeps"
   }
 }

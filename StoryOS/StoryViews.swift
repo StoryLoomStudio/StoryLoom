@@ -37,14 +37,14 @@ struct EntityList: View {
                         Button("New \(kind.title)") { workspace.createEntity(kind: kind) }
                     }
                 } label: {
-                    Image(systemName: "plus")
+                    GlyphIcon(glyph: .plus, size: Icon.control)
                 }
                 .help("New record")
             }
 
             if grouped.isEmpty {
                 EmptyStateView(
-                    symbol: "person.2",
+                    glyph: .family,
                     title: filter.isEmpty ? "No records yet" : "Nothing matches",
                     message: filter.isEmpty
                         ? "Records are optional. Make one when naming something explicitly would save you work — never before."
@@ -86,7 +86,7 @@ private struct EntityRow: View {
 
     var body: some View {
         HStack(spacing: Space.snug) {
-            Image(systemName: entity.kind.symbolName)
+            GlyphIcon(glyph: entity.kind.glyph, size: Icon.inline)
                 .font(.system(size: Icon.inline))
                 .foregroundStyle(entity.kind.tint)
                 .frame(width: 13)
@@ -137,7 +137,7 @@ struct EntityDossier: View {
                 }
             } else {
                 EmptyStateView(
-                    symbol: "person.2",
+                    glyph: .family,
                     title: "No record selected",
                     message: "Choose a person, place, object, or idea to see where it appears."
                 )
@@ -153,7 +153,7 @@ struct EntityDossier: View {
                     Button(kind.title) { workspace.updateEntity(entity.id, kind: kind) }
                 }
             } label: {
-                Label(entity.kind.title, systemImage: entity.kind.symbolName)
+                Label { Text(entity.kind.title) } icon: { entity.kind.glyph.menuImage(size: Icon.control) }
                     .font(Chrome.small)
                     .foregroundStyle(entity.kind.tint)
             }
@@ -252,7 +252,7 @@ struct EntityDossier: View {
                         Button(target.displayName) { workspace.createRelationship(from: entity, to: target) }
                     }
                 } label: {
-                    Label("Add relationship", systemImage: "plus")
+                    Label { Text("Add relationship") } icon: { Glyph.plus.menuImage(size: Icon.control) }
                         .font(Chrome.meta)
                 }
                 .menuStyle(.borderlessButton)
@@ -312,7 +312,7 @@ struct EntityDossier: View {
                     ForEach(participating) { event in
                         HoverRow(padding: Space.snug, action: { workspace.navigate(to: .event(event.id)) }) {
                             HStack(spacing: Space.small) {
-                                Image(systemName: event.certainty.symbolName)
+                                GlyphIcon(glyph: event.certainty.glyph, size: Icon.inline)
                                     .font(.system(size: Icon.inline))
                                     .foregroundStyle(event.certainty.tint)
                                     .frame(width: 14)
@@ -415,8 +415,7 @@ private struct RelationshipRow: View {
                 Button {
                     workspace.deleteRelationship(relationship.id)
                 } label: {
-                    Image(systemName: "minus.circle")
-                        .font(.system(size: Icon.control))
+                    GlyphIcon(glyph: .remove, size: Icon.control)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.tertiary)
@@ -460,14 +459,14 @@ struct EventList: View {
                 Button {
                     workspace.createEvent()
                 } label: {
-                    Image(systemName: "plus")
+                    GlyphIcon(glyph: .plus, size: Icon.control)
                 }
                 .help("New event")
             }
 
             if events.isEmpty {
                 EmptyStateView(
-                    symbol: "calendar.day.timeline.left",
+                    glyph: .chronology,
                     title: workspace.project.story.events.isEmpty ? "No events yet" : "Nothing matches",
                     message: workspace.project.story.events.isEmpty
                         ? "Add events when chronology starts to matter. Dates are never required — “the night before” is a perfectly good time."
@@ -513,7 +512,7 @@ private struct EventRow: View {
 
     var body: some View {
         HStack(spacing: Space.snug) {
-            Image(systemName: event.certainty.symbolName)
+            GlyphIcon(glyph: event.certainty.glyph, size: Icon.inline)
                 .font(.system(size: Icon.inline))
                 .foregroundStyle(event.certainty.tint)
                 .frame(width: 11)
@@ -639,7 +638,7 @@ struct EventDetail: View {
                                         let isParticipant = event.participantIDs.contains(entity.id)
                                         Chip(
                                             text: entity.displayName,
-                                            symbol: isParticipant ? "checkmark" : entity.kind.symbolName,
+                                            icon: isParticipant ? .glyph(.saved) : entity.kind.icon,
                                             tint: isParticipant ? entity.kind.tint : .secondary
                                         ) {
                                             workspace.toggleParticipant(entity.id, in: event.id)
@@ -658,7 +657,7 @@ struct EventDetail: View {
                 }
             } else {
                 EmptyStateView(
-                    symbol: "calendar.day.timeline.left",
+                    glyph: .chronology,
                     title: "No event selected",
                     message: "Chronology lives here, separately from the order you reveal it in."
                 )
@@ -688,14 +687,14 @@ struct NoteList: View {
                 Button {
                     workspace.createNote()
                 } label: {
-                    Image(systemName: "plus")
+                    GlyphIcon(glyph: .plus, size: Icon.control)
                 }
                 .help("New note")
             }
 
             if notes.isEmpty {
                 EmptyStateView(
-                    symbol: "note.text",
+                    glyph: .note,
                     title: workspace.project.story.notes.isEmpty ? "No notes" : "Nothing matches",
                     message: workspace.project.story.notes.isEmpty
                         ? "For the questions you are protecting, the voice you are chasing, the thing you must not explain."
@@ -771,7 +770,7 @@ struct NoteEditor: View {
                 }
             } else {
                 EmptyStateView(
-                    symbol: "note.text",
+                    glyph: .note,
                     title: "No note selected",
                     message: "Notes stay with the project and never reach an export."
                 )

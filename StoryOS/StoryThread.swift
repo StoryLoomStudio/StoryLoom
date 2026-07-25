@@ -194,11 +194,11 @@ nonisolated enum ThreadRole: String, CaseIterable, Codable, Hashable, Sendable {
         }
     }
 
-    var symbolName: String {
+    var glyph: Glyph {
         switch self {
-        case .opens: "circle"
-        case .advances: "arrow.forward"
-        case .lands: "largecircle.fill.circle"
+        case .opens: .circle
+        case .advances: .advances
+        case .lands: .circleDot
         }
     }
 }
@@ -279,13 +279,13 @@ nonisolated enum ThreadState: String, CaseIterable, Sendable {
         }
     }
 
-    var symbolName: String {
+    var glyph: Glyph {
         switch self {
-        case .unopened: "circle.dotted"
-        case .open: "circle"
-        case .cooling: "clock.badge.exclamationmark"
-        case .landed: "checkmark.circle.fill"
-        case .abandoned: "checkmark.seal"
+        case .unopened: .circleOff
+        case .open: .circle
+        case .cooling: .interrupted
+        case .landed: .saved
+        case .abandoned: .blessed
         }
     }
 

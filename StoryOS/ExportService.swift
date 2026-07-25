@@ -57,13 +57,13 @@ nonisolated enum ExportFormat: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var symbolName: String {
+    var glyph: Glyph {
         switch self {
-        case .markdown: "chevron.left.forwardslash.chevron.right"
-        case .plainText: "doc.plaintext"
-        case .rtf: "doc.richtext"
-        case .docx: "doc.text"
-        case .pdf: "doc.viewfinder"
+        case .markdown: .markdownFile
+        case .plainText: .plainTextFile
+        case .rtf: .richTextFile
+        case .docx: .wordFile
+        case .pdf: .pdfFile
         }
     }
 

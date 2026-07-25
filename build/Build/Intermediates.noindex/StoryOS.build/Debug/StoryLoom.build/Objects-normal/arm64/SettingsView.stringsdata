@@ -6,7 +6,7 @@
         "comment": "",
         "key": "Page",
         "location": {
-          "startingColumn": 34,
+          "startingColumn": 41,
           "startingLine": 17
         }
       },
@@ -14,7 +14,7 @@
         "comment": "",
         "key": "Writing",
         "location": {
-          "startingColumn": 34,
+          "startingColumn": 41,
           "startingLine": 19
         }
       },
@@ -22,7 +22,7 @@
         "comment": "",
         "key": "General",
         "location": {
-          "startingColumn": 34,
+          "startingColumn": 41,
           "startingLine": 21
         }
       },
@@ -247,7 +247,7 @@
         "key": "Forget project",
         "location": {
           "startingColumn": 35,
-          "startingLine": 211
+          "startingLine": 209
         }
       },
       {
@@ -255,7 +255,7 @@
         "key": "Recent projects",
         "location": {
           "startingColumn": 22,
-          "startingLine": 217
+          "startingLine": 215
         }
       },
       {
@@ -263,7 +263,7 @@
         "key": "Forgetting a project revokes StoryLoom's permission to open it without asking you again. It does not touch the files.",
         "location": {
           "startingColumn": 22,
-          "startingLine": 219
+          "startingLine": 217
         }
       },
       {
@@ -271,7 +271,7 @@
         "key": "Reset page to defaults",
         "location": {
           "startingColumn": 24,
-          "startingLine": 225
+          "startingLine": 223
         }
       }
     ]

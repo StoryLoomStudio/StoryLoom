@@ -38,7 +38,7 @@
         "comment": "",
         "key": "Leave Focus",
         "location": {
-          "startingColumn": 27,
+          "startingColumn": 34,
           "startingLine": 126
         }
       },
@@ -70,7 +70,7 @@
         "comment": "",
         "key": "Find in Project",
         "location": {
-          "startingColumn": 23,
+          "startingColumn": 30,
           "startingLine": 190
         }
       },
@@ -78,7 +78,7 @@
         "comment": "",
         "key": "New Scene",
         "location": {
-          "startingColumn": 23,
+          "startingColumn": 30,
           "startingLine": 197
         }
       },
@@ -86,7 +86,7 @@
         "comment": "",
         "key": "Inspector",
         "location": {
-          "startingColumn": 23,
+          "startingColumn": 30,
           "startingLine": 204
         }
       },
@@ -134,7 +134,7 @@
         "comment": "",
         "key": "More",
         "location": {
-          "startingColumn": 23,
+          "startingColumn": 30,
           "startingLine": 219
         }
       },

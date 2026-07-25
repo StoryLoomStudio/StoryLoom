@@ -255,7 +255,7 @@ struct StatusDot: View {
 /// page. Colour survives on the symbol, where it still says which kind this is.
 struct Chip: View {
     let text: String
-    var symbol: String?
+    var icon: IconSource?
     var tint: Color = .secondary
     var isTinted = false
     var action: (() -> Void)?
@@ -272,9 +272,8 @@ struct Chip: View {
 
     private var label: some View {
         HStack(spacing: Space.tight) {
-            if let symbol {
-                Image(systemName: symbol)
-                    .font(.system(size: Icon.inline, weight: .medium))
+            if let icon {
+                IconView(icon, size: Icon.chip)
                     .foregroundStyle(tint)
             }
             Text(text)
@@ -527,8 +526,7 @@ struct FilterField: View {
 
     var body: some View {
         HStack(spacing: Space.tight) {
-            Image(systemName: "line.3.horizontal.decrease")
-                .font(.system(size: Icon.inline))
+            GlyphIcon(glyph: .filter, size: Icon.inline)
                 .foregroundStyle(.tertiary)
 
             TextField(prompt, text: $text)
@@ -539,8 +537,7 @@ struct FilterField: View {
                 Button {
                     text = ""
                 } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: Icon.inline))
+                    GlyphIcon(glyph: .clear, size: Icon.inline)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.tertiary)
@@ -614,7 +611,7 @@ struct EmptyStateView: View {
             Label {
                 Text(title)
             } icon: {
-                IconView(icon, size: Icon.display)
+                IconView(icon, size: Icon.emptyState)
             }
         } description: {
             Text(message)

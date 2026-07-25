@@ -7,7 +7,7 @@
         "key": "Search everything, or run a command",
         "location": {
           "startingColumn": 27,
-          "startingLine": 32
+          "startingLine": 31
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "%lld",
         "location": {
           "startingColumn": 26,
-          "startingLine": 432
+          "startingLine": 430
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Search the manuscript and the story",
         "location": {
           "startingColumn": 27,
-          "startingLine": 426
+          "startingLine": 424
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "Close",
         "location": {
           "startingColumn": 27,
-          "startingLine": 441
+          "startingLine": 439
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Export",
         "location": {
           "startingColumn": 22,
-          "startingLine": 562
+          "startingLine": 560
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "Cancel",
         "location": {
           "startingColumn": 24,
-          "startingLine": 565
+          "startingLine": 563
         }
       },
       {
@@ -55,7 +55,7 @@
         "key": "%@ words · %lld documents",
         "location": {
           "startingColumn": 22,
-          "startingLine": 579
+          "startingLine": 577
         }
       },
       {
@@ -63,7 +63,7 @@
         "key": "Export…",
         "location": {
           "startingColumn": 24,
-          "startingLine": 584
+          "startingLine": 582
         }
       },
       {
@@ -71,7 +71,7 @@
         "key": "",
         "location": {
           "startingColumn": 32,
-          "startingLine": 606
+          "startingLine": 604
         }
       },
       {
@@ -79,7 +79,7 @@
         "key": "Title page",
         "location": {
           "startingColumn": 32,
-          "startingLine": 624
+          "startingLine": 622
         }
       },
       {
@@ -87,7 +87,7 @@
         "key": "Chapter headings",
         "location": {
           "startingColumn": 32,
-          "startingLine": 625
+          "startingLine": 623
         }
       },
       {
@@ -95,7 +95,7 @@
         "key": "Scene titles",
         "location": {
           "startingColumn": 32,
-          "startingLine": 626
+          "startingLine": 624
         }
       },
       {
@@ -103,7 +103,7 @@
         "key": "Notes",
         "location": {
           "startingColumn": 32,
-          "startingLine": 627
+          "startingLine": 625
         }
       },
       {
@@ -111,7 +111,7 @@
         "key": "Skip outline scenes",
         "location": {
           "startingColumn": 32,
-          "startingLine": 628
+          "startingLine": 626
         }
       },
       {
@@ -119,7 +119,7 @@
         "key": "",
         "location": {
           "startingColumn": 28,
-          "startingLine": 634
+          "startingLine": 632
         }
       },
       {
@@ -127,7 +127,7 @@
         "key": "Face",
         "location": {
           "startingColumn": 36,
-          "startingLine": 646
+          "startingLine": 644
         }
       },
       {
@@ -135,7 +135,7 @@
         "key": "Double-spaced",
         "location": {
           "startingColumn": 36,
-          "startingLine": 651
+          "startingLine": 649
         }
       },
       {
@@ -143,7 +143,7 @@
         "key": "Everything in the manuscript will be exported.",
         "location": {
           "startingColumn": 30,
-          "startingLine": 691
+          "startingLine": 688
         }
       }
     ]

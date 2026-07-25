@@ -4,50 +4,34 @@
     "Localizable": [
       {
         "comment": "",
-        "key": "New scene (⇧⌘N)",
+        "key": "Add to the manuscript (⇧⌘N for a scene)",
         "location": {
           "startingColumn": 23,
-          "startingLine": 153
+          "startingLine": 164
         }
       },
       {
         "comment": "",
-        "key": "Duplicate",
+        "key": "New Scene",
         "location": {
-          "startingColumn": 16,
-          "startingLine": 212
+          "startingColumn": 28,
+          "startingLine": 158
         }
       },
       {
         "comment": "",
-        "key": "Move Up",
+        "key": "New Chapter",
         "location": {
-          "startingColumn": 16,
-          "startingLine": 214
+          "startingColumn": 28,
+          "startingLine": 159
         }
       },
       {
         "comment": "",
-        "key": "Move Down",
+        "key": "New Volume",
         "location": {
-          "startingColumn": 16,
-          "startingLine": 216
-        }
-      },
-      {
-        "comment": "",
-        "key": "Status",
-        "location": {
-          "startingColumn": 14,
-          "startingLine": 219
-        }
-      },
-      {
-        "comment": "",
-        "key": "Archive",
-        "location": {
-          "startingColumn": 16,
-          "startingLine": 228
+          "startingColumn": 28,
+          "startingLine": 160
         }
       },
       {
@@ -55,7 +39,71 @@
         "key": "Restore",
         "location": {
           "startingColumn": 44,
-          "startingLine": 192
+          "startingLine": 202
+        }
+      },
+      {
+        "comment": "",
+        "key": "Duplicate",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 227
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Up",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 229
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Down",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 231
+        }
+      },
+      {
+        "comment": "",
+        "key": "Status",
+        "location": {
+          "startingColumn": 10,
+          "startingLine": 234
+        }
+      },
+      {
+        "comment": "",
+        "key": "Archive",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 243
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 12,
+          "startingLine": 246
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Chapter Here",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 265
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Scene Here",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 310
         }
       },
       {
@@ -63,7 +111,7 @@
         "key": "Lands a thread",
         "location": {
           "startingColumn": 40,
-          "startingLine": 269
+          "startingLine": 370
         }
       },
       {
@@ -71,7 +119,7 @@
         "key": "Lands %lld threads",
         "location": {
           "startingColumn": 59,
-          "startingLine": 269
+          "startingLine": 370
         }
       },
       {
@@ -79,7 +127,7 @@
         "key": "Scene status",
         "location": {
           "startingColumn": 19,
-          "startingLine": 432
+          "startingLine": 532
         }
       },
       {
@@ -87,7 +135,7 @@
         "key": "Column measure: %lld characters per line",
         "location": {
           "startingColumn": 29,
-          "startingLine": 476
+          "startingLine": 576
         }
       },
       {
@@ -95,7 +143,7 @@
         "key": "%lld characters",
         "location": {
           "startingColumn": 22,
-          "startingLine": 460
+          "startingLine": 560
         }
       },
       {
@@ -103,7 +151,7 @@
         "key": "Paragraph style",
         "location": {
           "startingColumn": 19,
-          "startingLine": 529
+          "startingLine": 629
         }
       },
       {
@@ -111,7 +159,7 @@
         "key": "Highlight",
         "location": {
           "startingColumn": 19,
-          "startingLine": 570
+          "startingLine": 670
         }
       },
       {
@@ -119,7 +167,7 @@
         "key": "Font for the selection",
         "location": {
           "startingColumn": 19,
-          "startingLine": 588
+          "startingLine": 688
         }
       },
       {
@@ -127,7 +175,7 @@
         "key": "Size for the selection",
         "location": {
           "startingColumn": 19,
-          "startingLine": 608
+          "startingLine": 708
         }
       },
       {
@@ -135,7 +183,7 @@
         "key": "Body Text",
         "location": {
           "startingColumn": 24,
-          "startingLine": 517
+          "startingLine": 617
         }
       },
       {
@@ -143,7 +191,7 @@
         "key": "Heading 1",
         "location": {
           "startingColumn": 24,
-          "startingLine": 519
+          "startingLine": 619
         }
       },
       {
@@ -151,7 +199,7 @@
         "key": "Heading 2",
         "location": {
           "startingColumn": 24,
-          "startingLine": 520
+          "startingLine": 620
         }
       },
       {
@@ -159,7 +207,15 @@
         "key": "Heading 3",
         "location": {
           "startingColumn": 24,
-          "startingLine": 521
+          "startingLine": 621
+        }
+      },
+      {
+        "comment": "",
+        "key": "Paragraph style",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 623
         }
       },
       {
@@ -167,7 +223,7 @@
         "key": "Marked (==, saved in the file)",
         "location": {
           "startingColumn": 24,
-          "startingLine": 555
+          "startingLine": 655
         }
       },
       {
@@ -175,7 +231,15 @@
         "key": "None",
         "location": {
           "startingColumn": 24,
-          "startingLine": 561
+          "startingLine": 661
+        }
+      },
+      {
+        "comment": "",
+        "key": "Highlight",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 663
         }
       },
       {
@@ -183,7 +247,15 @@
         "key": "Match the page",
         "location": {
           "startingColumn": 24,
-          "startingLine": 576
+          "startingLine": 676
+        }
+      },
+      {
+        "comment": "",
+        "key": "Font",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 682
         }
       },
       {
@@ -191,7 +263,7 @@
         "key": "Match the page",
         "location": {
           "startingColumn": 24,
-          "startingLine": 591
+          "startingLine": 691
         }
       },
       {
@@ -199,7 +271,7 @@
         "key": "%lld pt",
         "location": {
           "startingColumn": 28,
-          "startingLine": 594
+          "startingLine": 694
         }
       },
       {
@@ -207,7 +279,15 @@
         "key": "—",
         "location": {
           "startingColumn": 26,
-          "startingLine": 600
+          "startingLine": 700
+        }
+      },
+      {
+        "comment": "",
+        "key": "Size",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 698
         }
       },
       {
@@ -215,7 +295,7 @@
         "key": "%lld",
         "location": {
           "startingColumn": 46,
-          "startingLine": 600
+          "startingLine": 700
         }
       },
       {
@@ -223,7 +303,7 @@
         "key": "—",
         "location": {
           "startingColumn": 64,
-          "startingLine": 600
+          "startingLine": 700
         }
       },
       {
@@ -231,7 +311,7 @@
         "key": "Type and page",
         "location": {
           "startingColumn": 15,
-          "startingLine": 702
+          "startingLine": 800
         }
       },
       {
@@ -239,7 +319,15 @@
         "key": "%lld",
         "location": {
           "startingColumn": 22,
-          "startingLine": 690
+          "startingLine": 789
+        }
+      },
+      {
+        "comment": "",
+        "key": "Font",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 785
         }
       },
       {
@@ -247,7 +335,7 @@
         "key": "",
         "location": {
           "startingColumn": 32,
-          "startingLine": 717
+          "startingLine": 815
         }
       },
       {
@@ -255,7 +343,7 @@
         "key": "%lld",
         "location": {
           "startingColumn": 34,
-          "startingLine": 728
+          "startingLine": 826
         }
       },
       {
@@ -263,7 +351,7 @@
         "key": "",
         "location": {
           "startingColumn": 32,
-          "startingLine": 737
+          "startingLine": 835
         }
       },
       {
@@ -271,7 +359,7 @@
         "key": "",
         "location": {
           "startingColumn": 32,
-          "startingLine": 746
+          "startingLine": 844
         }
       },
       {
@@ -279,7 +367,7 @@
         "key": "",
         "location": {
           "startingColumn": 32,
-          "startingLine": 759
+          "startingLine": 857
         }
       },
       {
@@ -287,7 +375,7 @@
         "key": "",
         "location": {
           "startingColumn": 32,
-          "startingLine": 768
+          "startingLine": 866
         }
       },
       {
@@ -295,7 +383,7 @@
         "key": "",
         "location": {
           "startingColumn": 32,
-          "startingLine": 777
+          "startingLine": 875
         }
       },
       {
@@ -303,7 +391,7 @@
         "key": "Dim everything but",
         "location": {
           "startingColumn": 28,
-          "startingLine": 789
+          "startingLine": 887
         }
       },
       {
@@ -311,7 +399,7 @@
         "key": "Typewriter scrolling",
         "location": {
           "startingColumn": 28,
-          "startingLine": 796
+          "startingLine": 894
         }
       },
       {
@@ -319,7 +407,7 @@
         "key": "Tint dialogue",
         "location": {
           "startingColumn": 28,
-          "startingLine": 797
+          "startingLine": 895
         }
       },
       {
@@ -327,7 +415,7 @@
         "key": "Reset",
         "location": {
           "startingColumn": 24,
-          "startingLine": 803
+          "startingLine": 901
         }
       },
       {
@@ -335,7 +423,7 @@
         "key": "Begin.",
         "location": {
           "startingColumn": 22,
-          "startingLine": 824
+          "startingLine": 922
         }
       },
       {
@@ -343,7 +431,7 @@
         "key": "500",
         "location": {
           "startingColumn": 27,
-          "startingLine": 869
+          "startingLine": 967
         }
       },
       {
@@ -351,7 +439,7 @@
         "key": "50000",
         "location": {
           "startingColumn": 27,
-          "startingLine": 881
+          "startingLine": 979
         }
       },
       {
@@ -359,7 +447,7 @@
         "key": "%@ words",
         "location": {
           "startingColumn": 18,
-          "startingLine": 910
+          "startingLine": 1018
         }
       },
       {
@@ -367,7 +455,7 @@
         "key": "·",
         "location": {
           "startingColumn": 22,
-          "startingLine": 914
+          "startingLine": 1022
         }
       },
       {
@@ -375,7 +463,7 @@
         "key": "%@ selected",
         "location": {
           "startingColumn": 22,
-          "startingLine": 916
+          "startingLine": 1024
         }
       },
       {
@@ -383,15 +471,15 @@
         "key": "·",
         "location": {
           "startingColumn": 18,
-          "startingLine": 921
+          "startingLine": 1029
         }
       },
       {
         "comment": "",
-        "key": "Set scene and project targets",
+        "key": "Project target — click to change it, and this scene's",
         "location": {
           "startingColumn": 19,
-          "startingLine": 939
+          "startingLine": 1046
         }
       },
       {
@@ -399,7 +487,7 @@
         "key": "Typewriter scrolling",
         "location": {
           "startingColumn": 27,
-          "startingLine": 949
+          "startingLine": 1056
         }
       },
       {
@@ -407,7 +495,7 @@
         "key": "Dimming everything but the %@",
         "location": {
           "startingColumn": 27,
-          "startingLine": 954
+          "startingLine": 1061
         }
       },
       {
@@ -415,7 +503,7 @@
         "key": "1 comment",
         "location": {
           "startingColumn": 35,
-          "startingLine": 967
+          "startingLine": 1074
         }
       },
       {
@@ -423,23 +511,23 @@
         "key": "%lld comments",
         "location": {
           "startingColumn": 49,
-          "startingLine": 967
+          "startingLine": 1074
         }
       },
       {
         "comment": "",
-        "key": "Scene Goal: %lld%%",
+        "key": "%@ of %@",
         "location": {
           "startingColumn": 26,
-          "startingLine": 930
+          "startingLine": 1037
         }
       },
       {
         "comment": "",
         "key": "%lld",
         "location": {
-          "startingColumn": 27,
-          "startingLine": 962
+          "startingColumn": 34,
+          "startingLine": 1069
         }
       },
       {
@@ -447,7 +535,7 @@
         "key": "Nothing yet. Type “@” on the page.",
         "location": {
           "startingColumn": 22,
-          "startingLine": 1106
+          "startingLine": 1213
         }
       },
       {
@@ -455,7 +543,7 @@
         "key": "Select a passage and press ⌥⌘C.",
         "location": {
           "startingColumn": 22,
-          "startingLine": 1129
+          "startingLine": 1236
         }
       },
       {
@@ -463,7 +551,7 @@
         "key": "%@ words",
         "location": {
           "startingColumn": 18,
-          "startingLine": 1187
+          "startingLine": 1294
         }
       },
       {
@@ -471,7 +559,7 @@
         "key": "",
         "location": {
           "startingColumn": 20,
-          "startingLine": 1173
+          "startingLine": 1280
         }
       },
       {
@@ -479,7 +567,7 @@
         "key": "Create a thread this scene opens (⇧⌘T)",
         "location": {
           "startingColumn": 27,
-          "startingLine": 1242
+          "startingLine": 1349
         }
       },
       {
@@ -487,23 +575,23 @@
         "key": "Every thread is already linked here.",
         "location": {
           "startingColumn": 34,
-          "startingLine": 1218
+          "startingLine": 1325
         }
       },
       {
         "comment": "",
         "key": "Link",
         "location": {
-          "startingColumn": 31,
-          "startingLine": 1230
+          "startingColumn": 38,
+          "startingLine": 1337
         }
       },
       {
         "comment": "",
         "key": "Open a new one",
         "location": {
-          "startingColumn": 31,
-          "startingLine": 1239
+          "startingColumn": 38,
+          "startingLine": 1346
         }
       },
       {
@@ -511,7 +599,7 @@
         "key": "Unlink",
         "location": {
           "startingColumn": 24,
-          "startingLine": 1278
+          "startingLine": 1385
         }
       },
       {
@@ -519,7 +607,7 @@
         "key": "The words this was attached to are gone",
         "location": {
           "startingColumn": 31,
-          "startingLine": 1322
+          "startingLine": 1427
         }
       },
       {
@@ -527,7 +615,7 @@
         "key": "Go to Passage",
         "location": {
           "startingColumn": 28,
-          "startingLine": 1326
+          "startingLine": 1431
         }
       },
       {
@@ -535,7 +623,7 @@
         "key": "Resolve",
         "location": {
           "startingColumn": 28,
-          "startingLine": 1328
+          "startingLine": 1433
         }
       },
       {
@@ -543,7 +631,7 @@
         "key": "Delete",
         "location": {
           "startingColumn": 28,
-          "startingLine": 1330
+          "startingLine": 1435
         }
       }
     ]

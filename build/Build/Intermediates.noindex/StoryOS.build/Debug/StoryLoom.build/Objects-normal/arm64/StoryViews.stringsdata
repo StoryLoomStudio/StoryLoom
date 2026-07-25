@@ -54,7 +54,7 @@
         "comment": "",
         "key": "Add relationship",
         "location": {
-          "startingColumn": 27,
+          "startingColumn": 34,
           "startingLine": 255
         }
       },
@@ -95,7 +95,7 @@
         "key": "Remove relationship",
         "location": {
           "startingColumn": 23,
-          "startingLine": 423
+          "startingLine": 422
         }
       },
       {
@@ -103,7 +103,7 @@
         "key": "New event",
         "location": {
           "startingColumn": 23,
-          "startingLine": 465
+          "startingLine": 464
         }
       },
       {
@@ -111,7 +111,7 @@
         "key": "Move Earlier",
         "location": {
           "startingColumn": 40,
-          "startingLine": 484
+          "startingLine": 483
         }
       },
       {
@@ -119,7 +119,7 @@
         "key": "Move Later",
         "location": {
           "startingColumn": 40,
-          "startingLine": 485
+          "startingLine": 484
         }
       },
       {
@@ -127,7 +127,7 @@
         "key": "Delete",
         "location": {
           "startingColumn": 40,
-          "startingLine": 487
+          "startingLine": 486
         }
       },
       {
@@ -135,7 +135,7 @@
         "key": "%@, %@",
         "location": {
           "startingColumn": 29,
-          "startingLine": 527
+          "startingLine": 526
         }
       },
       {
@@ -143,7 +143,7 @@
         "key": "",
         "location": {
           "startingColumn": 32,
-          "startingLine": 561
+          "startingLine": 560
         }
       },
       {
@@ -151,7 +151,7 @@
         "key": "Delete Event",
         "location": {
           "startingColumn": 32,
-          "startingLine": 580
+          "startingLine": 579
         }
       },
       {
@@ -159,7 +159,7 @@
         "key": "",
         "location": {
           "startingColumn": 44,
-          "startingLine": 620
+          "startingLine": 619
         }
       },
       {
@@ -167,7 +167,7 @@
         "key": "Narrative placement is a separate fact from chronology.",
         "location": {
           "startingColumn": 43,
-          "startingLine": 632
+          "startingLine": 631
         }
       },
       {
@@ -175,7 +175,7 @@
         "key": "Not shown on the page",
         "location": {
           "startingColumn": 46,
-          "startingLine": 624
+          "startingLine": 623
         }
       },
       {
@@ -183,7 +183,7 @@
         "key": "%@ — %@",
         "location": {
           "startingColumn": 50,
-          "startingLine": 626
+          "startingLine": 625
         }
       },
       {
@@ -191,7 +191,7 @@
         "key": "New note",
         "location": {
           "startingColumn": 23,
-          "startingLine": 693
+          "startingLine": 692
         }
       },
       {
@@ -199,7 +199,7 @@
         "key": "Delete",
         "location": {
           "startingColumn": 36,
-          "startingLine": 721
+          "startingLine": 720
         }
       },
       {
@@ -207,7 +207,7 @@
         "key": "Delete",
         "location": {
           "startingColumn": 32,
-          "startingLine": 753
+          "startingLine": 752
         }
       }
     ]

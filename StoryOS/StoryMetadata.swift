@@ -168,16 +168,18 @@ nonisolated enum EntityKind: String, CaseIterable, Codable, Hashable, Sendable {
         }
     }
 
-    var symbolName: String {
+    var glyph: Glyph {
         switch self {
-        case .character: "person"
-        case .location: "mappin.and.ellipse"
-        case .object: "cube"
-        case .organization: "building.2"
-        case .theme: "text.quote"
-        case .symbol: "seal"
+        case .character: .character
+        case .location: .location
+        case .object: .object
+        case .organization: .organization
+        case .theme: .themeMotif
+        case .symbol: .symbolMotif
         }
     }
+
+    var icon: IconSource { .glyph(glyph) }
 
     var tint: Color {
         switch self {
@@ -251,17 +253,17 @@ nonisolated enum RelationshipKind: String, CaseIterable, Codable, Hashable, Send
         }
     }
 
-    var symbolName: String {
+    var glyph: Glyph {
         switch self {
-        case .knows: "person.2"
-        case .family: "figure.2.and.child.holdinghands"
-        case .loves: "heart"
-        case .opposes: "bolt"
-        case .owes: "arrow.left.arrow.right"
-        case .conceals: "eye.slash"
-        case .belongsTo: "link"
-        case .locatedIn: "mappin"
-        case .custom: "line.diagonal"
+        case .knows: .family
+        case .family: .family
+        case .loves: .loves
+        case .opposes: .opposes
+        case .owes: .relationshipEdge
+        case .conceals: .conceals
+        case .belongsTo: .link
+        case .locatedIn: .location
+        case .custom: .unspecified
         }
     }
 }
@@ -347,12 +349,12 @@ nonisolated enum EventCertainty: String, CaseIterable, Codable, Hashable, Sendab
         }
     }
 
-    var symbolName: String {
+    var glyph: Glyph {
         switch self {
-        case .stated: "circle.fill"
-        case .approximate: "circle.dashed"
-        case .disputed: "questionmark.circle"
-        case .unplaced: "circle.dotted"
+        case .stated: .circleDot
+        case .approximate: .unsaved
+        case .disputed: .mystery
+        case .unplaced: .circleOff
         }
     }
 

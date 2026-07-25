@@ -245,6 +245,28 @@ final class WorkspaceModel: ObservableObject {
         mutate("Change Project Word Target") { $0.story.projectWordTarget = max(0, target) }
     }
 
+    /// A new scene at the end of a named chapter, for the outline's own menus.
+    func createScene(in chapter: StoryProject.Chapter) {
+        guard let last = chapter.documents.last else { return }
+        let document = StoryDocument(
+            title: "Untitled Scene",
+            volume: last.volume,
+            chapter: last.chapter,
+            kind: .scene,
+            text: "",
+            status: .draft
+        )
+        mutate("New Scene") { project in
+            if let position = project.documents.firstIndex(where: { $0.id == last.id }) {
+                project.documents.insert(document, at: position + 1)
+            } else {
+                project.documents.append(document)
+            }
+        }
+        library = .manuscript
+        selectedDocumentID = document.id
+    }
+
     func createScene(kind: DocumentKind = .scene) {
         let chapter = selectedDocument?.chapter ?? project.documents.last?.chapter ?? "Chapter One"
         let document = StoryDocument(
@@ -319,6 +341,121 @@ final class WorkspaceModel: ObservableObject {
         }
         library = .manuscript
         selectedDocumentID = document.id
+    }
+
+    /// Deletes a scene — into the trash, where the prose stays readable and the
+    /// scene can be put back.
+    ///
+    /// Archive and delete are not the same act and both are worth having.
+    /// Archiving says "not in the book, but I am keeping it"; the scene stays in
+    /// the manuscript folder and in the outline under Archived. Deleting says "I
+    /// was wrong to write this". The trash is what makes the second one sayable
+    /// at one in the morning without it being irreversible.
+    func deleteDocument(_ document: StoryDocument) {
+        guard let position = project.documents.firstIndex(where: { $0.id == document.id }) else { return }
+        mutate("Delete Scene") { project in
+            let removed = project.documents.remove(at: position)
+            project.story.trash.insert(TrashedItem(payload: .document(removed)), at: 0)
+        }
+        if selectedDocumentID == document.id {
+            selectedDocumentID = project.documents.indices.contains(position)
+                ? project.documents[position].id
+                : project.documents.last?.id
+        }
+        scheduleReindex()
+    }
+
+    // MARK: - Outline
+
+    /// Moves scenes to a new place in the running order.
+    ///
+    /// `documents` *is* the manuscript order, so a move is an array move and
+    /// nothing else — no index stored on the scene to drift, no sort key to
+    /// renumber. Landing inside a different chapter adopts that chapter's name,
+    /// which is what makes dragging a scene into Chapter Four mean what it looks
+    /// like it means.
+    func moveDocuments(_ offsets: IndexSet, to destination: Int) {
+        guard !offsets.isEmpty else { return }
+        mutate("Reorder Scenes") { project in
+            project.documents.move(fromOffsets: offsets, toOffset: destination)
+            Self.adoptNeighbouringSection(in: &project, movedCount: offsets.count, around: destination, from: offsets)
+        }
+        scheduleReindex()
+    }
+
+    /// After a move, a scene takes the volume and chapter of whichever side of
+    /// the gap it landed against — preferring the scene above, because dropping
+    /// something *under* a heading is how every outliner in the world reads.
+    private static func adoptNeighbouringSection(
+        in project: inout StoryProject,
+        movedCount: Int,
+        around destination: Int,
+        from offsets: IndexSet
+    ) {
+        let removedBefore = offsets.filter { $0 < destination }.count
+        let start = destination - removedBefore
+        let end = start + movedCount - 1
+        guard project.documents.indices.contains(start) else { return }
+
+        let anchor = start > 0
+            ? project.documents[start - 1]
+            : (project.documents.indices.contains(end + 1) ? project.documents[end + 1] : nil)
+        guard let anchor else { return }
+
+        for position in start...min(end, project.documents.count - 1) {
+            project.documents[position].volume = anchor.volume
+            project.documents[position].chapter = anchor.chapter
+        }
+    }
+
+    /// Renames a chapter wherever that exact run of scenes sits.
+    func renameChapter(_ chapter: StoryProject.Chapter, to name: String) {
+        let ids = Set(chapter.documents.map(\.id))
+        mutate("Rename Chapter") { project in
+            for position in project.documents.indices where ids.contains(project.documents[position].id) {
+                project.documents[position].chapter = name
+            }
+        }
+    }
+
+    func renameVolume(_ volume: StoryProject.Volume, to name: String) {
+        let ids = Set(volume.documents.map(\.id))
+        mutate("Rename Volume") { project in
+            for position in project.documents.indices where ids.contains(project.documents[position].id) {
+                project.documents[position].volume = name
+            }
+        }
+    }
+
+    /// Starts a new chapter at the end of the manuscript, with one scene in it —
+    /// an empty chapter has nothing to hold its place in the running order,
+    /// because the order lives in the scenes.
+    func createChapter(named name: String = "New Chapter", in volume: String = "") {
+        let scene = StoryDocument(
+            title: "Untitled Scene",
+            volume: volume,
+            chapter: name,
+            kind: .scene,
+            text: "",
+            status: .draft
+        )
+        mutate("New Chapter") { $0.documents.append(scene) }
+        library = .manuscript
+        selectedDocumentID = scene.id
+    }
+
+    func createVolume(named name: String = "New Volume") {
+        let scene = StoryDocument(
+            title: "Untitled Scene",
+            volume: name,
+            chapter: "Chapter One",
+            kind: .scene,
+            text: "",
+            status: .draft
+        )
+        mutate("New Volume") { $0.documents.append(scene) }
+        library = .manuscript
+        selectedDocumentID = scene.id
     }
 
     // MARK: - Editor commands
@@ -679,6 +816,11 @@ final class WorkspaceModel: ObservableObject {
             guard let position = project.story.trash.firstIndex(where: { $0.id == item.id }) else { return }
             let restored = project.story.trash.remove(at: position)
             switch restored.payload {
+            case .document(let value):
+                // Back at the end of the running order rather than at its old
+                // index, for the same reason everything else here is: the index
+                // recorded at deletion is a lie the moment anything else moves.
+                project.documents.append(value)
             case .thread(let value):
                 project.story.threads.append(value)
             case .entity(let value):
@@ -1304,13 +1446,13 @@ enum PersistenceState: Equatable {
         }
     }
 
-    var symbolName: String {
+    var glyph: Glyph {
         switch self {
-        case .unsaved: "circle.dashed"
-        case .loading: "arrow.down.circle"
-        case .saving: "arrow.triangle.2.circlepath"
-        case .saved: "checkmark.circle"
-        case .failed: "exclamationmark.triangle.fill"
+        case .unsaved: .unsaved
+        case .loading: .loading
+        case .saving: .saving
+        case .saved: .saved
+        case .failed: .threat
         }
     }
 

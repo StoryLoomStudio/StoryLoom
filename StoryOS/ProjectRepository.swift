@@ -516,7 +516,7 @@ private enum MarkdownDocument {
     /// Keys this version of StoryLoom understands. Everything else in the front
     /// matter is somebody else's, and is written back out untouched.
     nonisolated static let knownKeys: Set<String> = [
-        "id", "title", "chapter", "kind", "status", "pov", "location",
+        "id", "title", "volume", "chapter", "kind", "status", "pov", "location",
         "intention", "turn", "withheld", "residue",
         "opens", "advances", "lands"
     ]
@@ -526,6 +526,7 @@ private enum MarkdownDocument {
             "---",
             "id: \(YAML.scalar(document.id.uuidString))",
             "title: \(YAML.scalar(document.title))",
+            "volume: \(YAML.scalar(document.volume))",
             "chapter: \(YAML.scalar(document.chapter))",
             "kind: \(YAML.scalar(document.kind.rawValue))",
             "status: \(YAML.scalar(document.status.rawValue))",
@@ -590,6 +591,7 @@ private enum MarkdownDocument {
         return StoryDocument(
             id: id,
             title: values["title"] ?? "Untitled Scene",
+            volume: values["volume"] ?? "",
             chapter: values["chapter"] ?? "",
             kind: values["kind"].flatMap(DocumentKind.init(rawValue:)) ?? .scene,
             text: body,
