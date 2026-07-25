@@ -1,5 +1,0 @@
----
-triple:          'arm64-apple-darwin'
-binary-path:     '/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Products/Release/StoryLoom.app/Contents/MacOS/StoryLoom'
-relocations:     []
-...
