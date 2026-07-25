@@ -1,0 +1,23 @@
+{
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/TrashViews.swift" : {
+    "const-values" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/TrashViews.swiftconstvalues",
+    "dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/TrashViews.d",
+    "diagnostics" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/TrashViews.dia",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/TrashViews.o",
+    "swift-dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/TrashViews.swiftdeps"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/WorkspaceModel.swift" : {
+    "const-values" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/WorkspaceModel.swiftconstvalues",
+    "dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/WorkspaceModel.d",
+    "diagnostics" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/WorkspaceModel.dia",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/WorkspaceModel.o",
+    "swift-dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/WorkspaceModel.swiftdeps"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/WorkspaceView.swift" : {
+    "const-values" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/WorkspaceView.swiftconstvalues",
+    "dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/WorkspaceView.d",
+    "diagnostics" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/WorkspaceView.dia",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/WorkspaceView.o",
+    "swift-dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/WorkspaceView.swiftdeps"
+  }
+}

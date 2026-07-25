@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+	A *partial* Info.plist. GENERATE_INFOPLIST_FILE is YES, so Xcode merges the
+	standard keys — CFBundleIdentifier, CFBundleExecutable, CFBundleName, the
+	versions, NSPrincipalClass, and every INFOPLIST_KEY_* build setting — into
+	this file at build time. Do not add those here by hand; they would go stale
+	against the build settings that are the real source of truth.
+
+	What lives here is only what a build setting cannot express: the nested
+	document-type and exported-UTI declarations.
+
+	Note the shape being declared. A StoryLoom project is an ordinary *folder*
+	of Markdown; the `.storyloom` extension belongs to the `project.storyloom`
+	manifest file inside it. That is a flat file, which is why the UTI conforms
+	to public.data and not com.apple.package.
+-->
+<plist version="1.0">
+<dict>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>io.storyloom.project</string>
+			<key>UTTypeDescription</key>
+			<string>StoryLoom Project</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>storyloom</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>StoryLoom Project</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>io.storyloom.project</string>
+			</array>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+		</dict>
+	</array>
+</dict>
+</plist>

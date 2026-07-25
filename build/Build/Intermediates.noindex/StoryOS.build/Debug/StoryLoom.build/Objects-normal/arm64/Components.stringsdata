@@ -1,0 +1,16 @@
+{
+  "source": "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Components.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Clear filter",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 547
+        }
+      }
+    ]
+  },
+  "version": 1
+}

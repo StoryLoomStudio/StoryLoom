@@ -1,0 +1,552 @@
+{
+  "source": "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/ManuscriptViews.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "New scene (⇧⌘N)",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 153
+        }
+      },
+      {
+        "comment": "",
+        "key": "Duplicate",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 212
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Up",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 214
+        }
+      },
+      {
+        "comment": "",
+        "key": "Move Down",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 216
+        }
+      },
+      {
+        "comment": "",
+        "key": "Status",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 219
+        }
+      },
+      {
+        "comment": "",
+        "key": "Archive",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 228
+        }
+      },
+      {
+        "comment": "",
+        "key": "Restore",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 192
+        }
+      },
+      {
+        "comment": "",
+        "key": "Lands a thread",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 269
+        }
+      },
+      {
+        "comment": "",
+        "key": "Lands %lld threads",
+        "location": {
+          "startingColumn": 59,
+          "startingLine": 269
+        }
+      },
+      {
+        "comment": "",
+        "key": "Scene status",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 432
+        }
+      },
+      {
+        "comment": "",
+        "key": "Column measure: %lld characters per line",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 476
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld characters",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 460
+        }
+      },
+      {
+        "comment": "",
+        "key": "Paragraph style",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 529
+        }
+      },
+      {
+        "comment": "",
+        "key": "Highlight",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 570
+        }
+      },
+      {
+        "comment": "",
+        "key": "Font for the selection",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 588
+        }
+      },
+      {
+        "comment": "",
+        "key": "Size for the selection",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 608
+        }
+      },
+      {
+        "comment": "",
+        "key": "Body Text",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 517
+        }
+      },
+      {
+        "comment": "",
+        "key": "Heading 1",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 519
+        }
+      },
+      {
+        "comment": "",
+        "key": "Heading 2",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 520
+        }
+      },
+      {
+        "comment": "",
+        "key": "Heading 3",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 521
+        }
+      },
+      {
+        "comment": "",
+        "key": "Marked (==, saved in the file)",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 555
+        }
+      },
+      {
+        "comment": "",
+        "key": "None",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 561
+        }
+      },
+      {
+        "comment": "",
+        "key": "Match the page",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 576
+        }
+      },
+      {
+        "comment": "",
+        "key": "Match the page",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 591
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld pt",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 594
+        }
+      },
+      {
+        "comment": "",
+        "key": "—",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 600
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 600
+        }
+      },
+      {
+        "comment": "",
+        "key": "—",
+        "location": {
+          "startingColumn": 64,
+          "startingLine": 600
+        }
+      },
+      {
+        "comment": "",
+        "key": "Type and page",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 702
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 690
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 717
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 728
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 737
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 746
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 759
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 768
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 777
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dim everything but",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 789
+        }
+      },
+      {
+        "comment": "",
+        "key": "Typewriter scrolling",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 796
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tint dialogue",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 797
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 803
+        }
+      },
+      {
+        "comment": "",
+        "key": "Begin.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 824
+        }
+      },
+      {
+        "comment": "",
+        "key": "500",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 869
+        }
+      },
+      {
+        "comment": "",
+        "key": "50000",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 881
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ words",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 910
+        }
+      },
+      {
+        "comment": "",
+        "key": "·",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 914
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ selected",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 916
+        }
+      },
+      {
+        "comment": "",
+        "key": "·",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 921
+        }
+      },
+      {
+        "comment": "",
+        "key": "Set scene and project targets",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 939
+        }
+      },
+      {
+        "comment": "",
+        "key": "Typewriter scrolling",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 949
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dimming everything but the %@",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 954
+        }
+      },
+      {
+        "comment": "",
+        "key": "1 comment",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 967
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld comments",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 967
+        }
+      },
+      {
+        "comment": "",
+        "key": "Scene Goal: %lld%%",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 930
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 962
+        }
+      },
+      {
+        "comment": "",
+        "key": "Nothing yet. Type “@” on the page.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1106
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select a passage and press ⌥⌘C.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1129
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ words",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1187
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 1173
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create a thread this scene opens (⇧⌘T)",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 1242
+        }
+      },
+      {
+        "comment": "",
+        "key": "Every thread is already linked here.",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 1218
+        }
+      },
+      {
+        "comment": "",
+        "key": "Link",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 1230
+        }
+      },
+      {
+        "comment": "",
+        "key": "Open a new one",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 1239
+        }
+      },
+      {
+        "comment": "",
+        "key": "Unlink",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 1278
+        }
+      },
+      {
+        "comment": "",
+        "key": "The words this was attached to are gone",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 1322
+        }
+      },
+      {
+        "comment": "",
+        "key": "Go to Passage",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 1326
+        }
+      },
+      {
+        "comment": "",
+        "key": "Resolve",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 1328
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 1330
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,191 @@
+{
+  "" : {
+    "const-values" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryLoom-primary.swiftconstvalues",
+    "dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryLoom-primary.d",
+    "diagnostics" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryLoom-primary.dia",
+    "emit-module-dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryLoom-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryLoom-primary-emit-module.dia",
+    "pch" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryLoom-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryLoom-primary.swiftdeps"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/AppSettings.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/AppSettings.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/AppSettings.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/AppSettings.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Components.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/Components.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/Components.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/Components.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/ContinuityChecker.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ContinuityChecker.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ContinuityChecker.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ContinuityChecker.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/ExportService.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ExportService.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ExportService.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ExportService.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/HistoryViews.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/HistoryViews.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/HistoryViews.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/HistoryViews.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/InlineMarkup.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/InlineMarkup.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/InlineMarkup.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/InlineMarkup.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/ManuscriptEditor.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ManuscriptEditor.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ManuscriptEditor.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ManuscriptEditor.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/ManuscriptViews.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ManuscriptViews.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ManuscriptViews.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ManuscriptViews.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Markdown/BlockParser.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/BlockParser.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/BlockParser.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/BlockParser.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Markdown/HTMLToMarkdownConverter.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/HTMLToMarkdownConverter.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/HTMLToMarkdownConverter.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/HTMLToMarkdownConverter.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Markdown/InlineParser.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/InlineParser.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/InlineParser.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/InlineParser.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Markdown/MarkdownAST.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/MarkdownAST.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/MarkdownAST.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/MarkdownAST.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Markdown/MarkdownInput.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/MarkdownInput.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/MarkdownInput.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/MarkdownInput.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Markdown/MarkdownSyntax.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/MarkdownSyntax.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/MarkdownSyntax.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/MarkdownSyntax.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Overlays.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/Overlays.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/Overlays.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/Overlays.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Presentation.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/Presentation.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/Presentation.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/Presentation.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/ProjectHistory.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ProjectHistory.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ProjectHistory.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ProjectHistory.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/ProjectRepository.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ProjectRepository.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ProjectRepository.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ProjectRepository.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/ProseStyler.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ProseStyler.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ProseStyler.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ProseStyler.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/RecentProjects.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/RecentProjects.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/RecentProjects.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/RecentProjects.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/SearchEngine.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/SearchEngine.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/SearchEngine.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/SearchEngine.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/SettingsView.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/SettingsView.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/SettingsView.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/SettingsView.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/StartScreen.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StartScreen.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StartScreen.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StartScreen.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/StoryBrain.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryBrain.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryBrain.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryBrain.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/StoryLoomApp.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryLoomApp.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryLoomApp.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryLoomApp.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/StoryMetadata.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryMetadata.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryMetadata.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryMetadata.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/StoryModel.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryModel.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryModel.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryModel.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/StoryThread.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryThread.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryThread.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryThread.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/StoryViews.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryViews.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryViews.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/StoryViews.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/TextAnchor.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/TextAnchor.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/TextAnchor.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/TextAnchor.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Theme.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/Theme.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/Theme.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/Theme.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/ThreadViews.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ThreadViews.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ThreadViews.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/ThreadViews.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Trash.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/Trash.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/Trash.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/Trash.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/TrashViews.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/TrashViews.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/TrashViews.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/TrashViews.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/WorkspaceModel.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/WorkspaceModel.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/WorkspaceModel.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/WorkspaceModel.o"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/WorkspaceView.swift" : {
+    "index-unit-output-path" : "/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/WorkspaceView.o",
+    "llvm-bc" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/WorkspaceView.bc",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Release/StoryLoom.build/Objects-normal/arm64/WorkspaceView.o"
+  }
+}

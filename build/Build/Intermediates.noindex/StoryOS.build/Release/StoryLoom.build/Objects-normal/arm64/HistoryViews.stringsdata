@@ -1,0 +1,88 @@
+{
+  "source": "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/HistoryViews.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "No save points",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 28
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld save points",
+        "location": {
+          "startingColumn": 69,
+          "startingLine": 28
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save a point you can come back to (⇧⌘S)",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Save Point",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 75
+        }
+      },
+      {
+        "comment": "",
+        "key": "Restore “%@”?",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 172
+        }
+      },
+      {
+        "comment": "",
+        "key": "Restore this version",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 108
+        }
+      },
+      {
+        "comment": "",
+        "key": "Restoring writes a save point for where you are now, then brings this version forward as a new revision. Nothing later is deleted.",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 124
+        }
+      },
+      {
+        "comment": "",
+        "key": "Restore",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 176
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 177
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your current version is saved as a new point first, so this is reversible.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 179
+        }
+      }
+    ]
+  },
+  "version": 1
+}

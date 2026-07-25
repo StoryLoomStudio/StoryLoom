@@ -1,0 +1,30 @@
+{
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/SearchEngine.swift" : {
+    "const-values" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/SearchEngine.swiftconstvalues",
+    "dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/SearchEngine.d",
+    "diagnostics" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/SearchEngine.dia",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/SearchEngine.o",
+    "swift-dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/SearchEngine.swiftdeps"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/SettingsView.swift" : {
+    "const-values" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/SettingsView.swiftconstvalues",
+    "dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/SettingsView.d",
+    "diagnostics" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/SettingsView.dia",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/SettingsView.o",
+    "swift-dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/SettingsView.swiftdeps"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/StartScreen.swift" : {
+    "const-values" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/StartScreen.swiftconstvalues",
+    "dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/StartScreen.d",
+    "diagnostics" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/StartScreen.dia",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/StartScreen.o",
+    "swift-dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/StartScreen.swiftdeps"
+  },
+  "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/StoryBrain.swift" : {
+    "const-values" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/StoryBrain.swiftconstvalues",
+    "dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/StoryBrain.d",
+    "diagnostics" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/StoryBrain.dia",
+    "object" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/StoryBrain.o",
+    "swift-dependencies" : "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/build/Build/Intermediates.noindex/StoryOS.build/Debug/StoryLoom.build/Objects-normal/arm64/StoryBrain.swiftdeps"
+  }
+}

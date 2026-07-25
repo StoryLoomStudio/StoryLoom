@@ -1,0 +1,217 @@
+{
+  "StoryOS/AppSettings.swift": {
+    "mtime": 1784992296.0945544,
+    "ast_hash": "d8bd0b543c4857c5acb0f702f198ac91",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/AccentColor.colorset/Contents.json": {
+    "mtime": 1783877830.7228477,
+    "ast_hash": "55019f7265dde0a78318b0807f98e847",
+    "semantic_hash": "55019f7265dde0a78318b0807f98e847"
+  },
+  "StoryOS/Assets.xcassets/AppIcon.appiconset/Contents.json": {
+    "mtime": 1783981452.99568,
+    "ast_hash": "284e79f3134449b80d00d732a62a5b9b",
+    "semantic_hash": "284e79f3134449b80d00d732a62a5b9b"
+  },
+  "StoryOS/Assets.xcassets/Contents.json": {
+    "mtime": 1784993176.097883,
+    "ast_hash": "9deb2ada1cc834bbebf8bbad9c8978a1",
+    "semantic_hash": "9deb2ada1cc834bbebf8bbad9c8978a1"
+  },
+  "StoryOS/Components.swift": {
+    "mtime": 1784992296.1005304,
+    "ast_hash": "f5d56c362a0d83d98e839961a3a9e8a6",
+    "semantic_hash": ""
+  },
+  "StoryOS/ContinuityChecker.swift": {
+    "mtime": 1784992296.1049812,
+    "ast_hash": "d84483a865c6ccc68d61c49d19daadd0",
+    "semantic_hash": ""
+  },
+  "StoryOS/ExportService.swift": {
+    "mtime": 1784992313.51684,
+    "ast_hash": "8698604faf66238c481971b2bde96cf8",
+    "semantic_hash": ""
+  },
+  "StoryOS/InlineMarkup.swift": {
+    "mtime": 1784995957.8308184,
+    "ast_hash": "fc7e2cc184741fe8022c146c043e4eb6",
+    "semantic_hash": ""
+  },
+  "StoryOS/ManuscriptEditor.swift": {
+    "mtime": 1784995977.4866936,
+    "ast_hash": "df9fa9d52d580c7b1f9e6aae65ada037",
+    "semantic_hash": ""
+  },
+  "StoryOS/ManuscriptViews.swift": {
+    "mtime": 1784995996.7060454,
+    "ast_hash": "4bcccf48596f4c8609cc7d83ee9c124e",
+    "semantic_hash": ""
+  },
+  "StoryOS/Overlays.swift": {
+    "mtime": 1784992296.1255426,
+    "ast_hash": "5a3329215c786a88a934f0251a8d0d78",
+    "semantic_hash": ""
+  },
+  "StoryOS/ProjectHistory.swift": {
+    "mtime": 1784992296.1280065,
+    "ast_hash": "d23c383324a2078177857925b482361b",
+    "semantic_hash": ""
+  },
+  "StoryOS/ProjectRepository.swift": {
+    "mtime": 1784992313.5142148,
+    "ast_hash": "42a470e3ada99f9d23012da03c09ff65",
+    "semantic_hash": ""
+  },
+  "StoryOS/ProseStyler.swift": {
+    "mtime": 1784995972.727931,
+    "ast_hash": "c1aa10d25ed80c00084f284eea13a539",
+    "semantic_hash": ""
+  },
+  "StoryOS/RecentProjects.swift": {
+    "mtime": 1784992296.1361809,
+    "ast_hash": "eaad7004b00aad4e7fd0e1dffa6b7c7d",
+    "semantic_hash": ""
+  },
+  "StoryOS/ReviewViews.swift": {
+    "mtime": 1784992296.139498,
+    "ast_hash": "d6c60c87d2d0522244f4431230fd09cf",
+    "semantic_hash": ""
+  },
+  "StoryOS/SampleProject.swift": {
+    "mtime": 1784992296.1434731,
+    "ast_hash": "84be965e3fa9185e996ba3152c880a8a",
+    "semantic_hash": ""
+  },
+  "StoryOS/SearchEngine.swift": {
+    "mtime": 1784992296.1460505,
+    "ast_hash": "d35c205ca9e36ef97eb869078ff10b94",
+    "semantic_hash": ""
+  },
+  "StoryOS/SettingsView.swift": {
+    "mtime": 1784992313.5114024,
+    "ast_hash": "332a66f47b7763a1c150563e445b8b8a",
+    "semantic_hash": ""
+  },
+  "StoryOS/StoryBrain.swift": {
+    "mtime": 1784992296.1501164,
+    "ast_hash": "d17ea5b31cb2dab4d7e4356b9ea1a824",
+    "semantic_hash": ""
+  },
+  "StoryOS/StoryMetadata.swift": {
+    "mtime": 1784992296.154345,
+    "ast_hash": "e1fb7987e1452f21d393831a9deb3cdc",
+    "semantic_hash": ""
+  },
+  "StoryOS/StoryModel.swift": {
+    "mtime": 1784992296.1567857,
+    "ast_hash": "7e581b29245726498e0e0dfc943ca358",
+    "semantic_hash": ""
+  },
+  "StoryOS/StoryThread.swift": {
+    "mtime": 1784992296.158897,
+    "ast_hash": "93d78b0205dfa8cdfe664f86a79d100e",
+    "semantic_hash": ""
+  },
+  "StoryOS/StoryViews.swift": {
+    "mtime": 1784992296.1613061,
+    "ast_hash": "1b89e51c7bf2967643b790caf7242847",
+    "semantic_hash": ""
+  },
+  "StoryOS/TextAnchor.swift": {
+    "mtime": 1784992296.163104,
+    "ast_hash": "e8afe788bb535ae682c3064b88ec921b",
+    "semantic_hash": ""
+  },
+  "StoryOS/Theme.swift": {
+    "mtime": 1784992296.16532,
+    "ast_hash": "3592e74037f00dcc408f8bb6856b99d3",
+    "semantic_hash": ""
+  },
+  "StoryOS/ThreadViews.swift": {
+    "mtime": 1784992296.167076,
+    "ast_hash": "e33d04d99b50364f90654c9ef3361910",
+    "semantic_hash": ""
+  },
+  "StoryOS/WorkspaceModel.swift": {
+    "mtime": 1784992313.5084872,
+    "ast_hash": "e22e64685d81f95663bec053fc82cbbf",
+    "semantic_hash": ""
+  },
+  "StoryOS/WorkspaceView.swift": {
+    "mtime": 1784992296.1724238,
+    "ast_hash": "877e50feefd56df94585e2f05fde18b7",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/AppIcon.appiconset/icon_1024.png": {
+    "mtime": 1784993329.8377466,
+    "ast_hash": "ee30b01a3f1e591cfd57b9df8edd224a",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/AppIcon.appiconset/icon_128.png": {
+    "mtime": 1784993329.5947008,
+    "ast_hash": "689b324dcdbb28f70a9143977e64025d",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/AppIcon.appiconset/icon_16.png": {
+    "mtime": 1784993329.4454463,
+    "ast_hash": "afc7093075169714a04b89febab8afc5",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/AppIcon.appiconset/icon_256.png": {
+    "mtime": 1784993329.6418326,
+    "ast_hash": "b6fc4d19cfedae5640824f721a959f23",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/AppIcon.appiconset/icon_32.png": {
+    "mtime": 1784993329.5002065,
+    "ast_hash": "8fa044b369a3329913c830a247bd3b0d",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/AppIcon.appiconset/icon_512.png": {
+    "mtime": 1784993329.7074816,
+    "ast_hash": "fc755e08e867c217df78857abcff0276",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/AppIcon.appiconset/icon_64.png": {
+    "mtime": 1784993329.5491025,
+    "ast_hash": "b8314328dfe0104c123d1cd792b039d4",
+    "semantic_hash": ""
+  },
+  "StoryOS/StoryloomApp.swift": {
+    "mtime": 1784992296.1522849,
+    "ast_hash": "f61e8b4a6f3ede5a4d43ff9a5d7e5e33",
+    "semantic_hash": ""
+  },
+  ".agents/rules/graphify.md": {
+    "mtime": 1784931826.4036086,
+    "ast_hash": "f1e53ecc9194573d3c28fc116c743a2e",
+    "semantic_hash": ""
+  },
+  ".agents/workflows/graphify.md": {
+    "mtime": 1784931826.4037316,
+    "ast_hash": "0bc020d491fca99550c1ea3de0a5f862",
+    "semantic_hash": ""
+  },
+  "storyloom.svg": {
+    "mtime": 1784985499.8277264,
+    "ast_hash": "8ec26125dcef6ebc7b5bb4d000667101",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/storyloom.imageset/Contents.json": {
+    "mtime": 1784993200.992042,
+    "ast_hash": "702e06abe89ea2bbf8093d57f6975611",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/storyloom.imageset/storyloom.svg": {
+    "mtime": 1784993200.992073,
+    "ast_hash": "8ec26125dcef6ebc7b5bb4d000667101",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/Image.imageset/Contents.json": {
+    "mtime": 1784993176.097769,
+    "ast_hash": "24a872b26b3f1f80719e1d7d53d10f8f",
+    "semantic_hash": ""
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "source": "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/Overlays.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Search everything, or run a command",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 32
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 432
+        }
+      },
+      {
+        "comment": "",
+        "key": "Search the manuscript and the story",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 426
+        }
+      },
+      {
+        "comment": "",
+        "key": "Close",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 441
+        }
+      },
+      {
+        "comment": "",
+        "key": "Export",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 562
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 565
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ words · %lld documents",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 579
+        }
+      },
+      {
+        "comment": "",
+        "key": "Export…",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 584
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 606
+        }
+      },
+      {
+        "comment": "",
+        "key": "Title page",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 624
+        }
+      },
+      {
+        "comment": "",
+        "key": "Chapter headings",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 625
+        }
+      },
+      {
+        "comment": "",
+        "key": "Scene titles",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 626
+        }
+      },
+      {
+        "comment": "",
+        "key": "Notes",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 627
+        }
+      },
+      {
+        "comment": "",
+        "key": "Skip outline scenes",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 628
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 634
+        }
+      },
+      {
+        "comment": "",
+        "key": "Face",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 646
+        }
+      },
+      {
+        "comment": "",
+        "key": "Double-spaced",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 651
+        }
+      },
+      {
+        "comment": "",
+        "key": "Everything in the manuscript will be exported.",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 691
+        }
+      }
+    ]
+  },
+  "version": 1
+}

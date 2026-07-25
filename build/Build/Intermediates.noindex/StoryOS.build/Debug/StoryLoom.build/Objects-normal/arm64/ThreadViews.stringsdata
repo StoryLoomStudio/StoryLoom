@@ -1,0 +1,104 @@
+{
+  "source": "/Users/vibrant/Desktop/Projects/StoryOS/StoryOS/StoryOS/ThreadViews.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Open a new thread",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 53
+        }
+      },
+      {
+        "comment": "",
+        "key": "Owe It Again",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 91
+        }
+      },
+      {
+        "comment": "",
+        "key": "Leave Open on Purpose",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 96
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@. %@. %@",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 128
+        }
+      },
+      {
+        "comment": "",
+        "key": "·",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 219
+        }
+      },
+      {
+        "comment": "",
+        "key": "Owe It Again",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 229
+        }
+      },
+      {
+        "comment": "",
+        "key": "Leave Open on Purpose",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 233
+        }
+      },
+      {
+        "comment": "",
+        "key": "Some questions are meant to stay open. StoryLoom will stop counting.",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 236
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld scenes and %@ words have passed since anything moved this.",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 262
+        }
+      },
+      {
+        "comment": "",
+        "key": "No scene touches this yet. Open a scene and link it in the inspector.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 282
+        }
+      },
+      {
+        "comment": "",
+        "key": "No scene lands this. The reader is still holding it.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 358
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>logFormatVersion</key>
+	<integer>12</integer>
+	<key>logs</key>
+	<dict>
+		<key>7ACAE2AD-FF53-47DE-A0F1-F1E792CBD068</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>7ACAE2AD-FF53-47DE-A0F1-F1E792CBD068.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>StoryOS project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>StoryLoom</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Cleaning project StoryOS with scheme StoryLoom and configuration Debug</string>
+			<key>timeStartedRecording</key>
+			<real>806706820.21700203</real>
+			<key>timeStoppedRecording</key>
+			<real>806706820.39843702</real>
+			<key>title</key>
+			<string>Cleaning project StoryOS with scheme StoryLoom and configuration Debug</string>
+			<key>uniqueIdentifier</key>
+			<string>7ACAE2AD-FF53-47DE-A0F1-F1E792CBD068</string>
+		</dict>
+	</dict>
+</dict>
+</plist>
