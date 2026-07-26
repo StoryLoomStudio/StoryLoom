@@ -62,7 +62,7 @@ enum Radius {
 /// Three sizes, and they exist so there is one place to change this again.
 enum Icon {
     /// A control the pointer aims at: a format-bar button, a strip's action.
-    static let control: CGFloat = 14
+    static let control: CGFloat = 16
     /// Beside a row's text — a status mark, a thread symbol, a kind.
     static let inline: CGFloat = 12
     /// A chevron or a hairline indicator; the smallest symbol drawn.
@@ -102,6 +102,22 @@ enum Icon {
     static let toolbar: CGFloat = control + 1
     /// Beside a row in a navigator or list.
     static let navigatorRow: CGFloat = inline
+    /// The + / filter controls in a navigator's strip. Smaller than a format-bar
+    /// control: it sits beside an 11pt filter field, not on a toolbar, and at
+    /// `control` it was the loudest thing in the column.
+    ///
+    /// Every navigator uses this one number. Three of the four strips hang their
+    /// + off a `Menu`, and a menu's artwork has to be *baked* at the size rather
+    /// than laid out at it — see `Glyph.menuImage`. Passing this size to
+    /// `GlyphIcon` inside a `Menu` label is how the manuscript's + came to be
+    /// drawn half again as big as the one two panes over.
+    static let navigatorAction: CGFloat = 13
+    /// A group's icon in the manuscript binder. One size for all four tiers, so
+    /// a Volume and a Folder occupy the same optical weight and only the drawing
+    /// differs.
+    static let folder: CGFloat = 14
+    /// The disclosure chevron on a group row.
+    static let chevron: CGFloat = 9
     /// The save indicator and the editor's status line.
     static let status: CGFloat = inline
     /// The mark on an interrupting banner.
@@ -234,6 +250,13 @@ enum Glyph: String, Hashable, Sendable {
     case richTextFile = "file-type"
     case pdfFile = "file-scan"
     case wordFile = "file-down"
+    // What a group in the manuscript *is*. One family — a shelf, several books,
+    // an open book — so the tier is legible from the icon alone, plus the plain
+    // folder for a group that is only a container.
+    case volume = "library-big"
+    case part = "book-copy"
+    case chapter = "book-open-text"
+
     case focusDepth = "crosshair"
     case enterFocus = "maximize-2"
     case leaveFocus = "minimize-2"
@@ -310,13 +333,17 @@ struct GlyphIcon: View {
 }
 
 extension Glyph {
-    /// The same glyph, for a menu.
+    /// The same glyph, for a menu — its items *and* its label.
     ///
     /// `GlyphIcon` is laid out by SwiftUI and obeys its frame everywhere except
     /// inside a `Menu`, where AppKit does the drawing: it rasterises the icon and
     /// scales it to the menu's own image size, and a `.frame` is simply ignored.
     /// Measured, that put these glyphs at 22pt beside 11pt text — twice the size
     /// asked for, which is what made the kind menu look wrong.
+    ///
+    /// A borderless menu's *label* goes through the same AppKit path, which is
+    /// why the manuscript's + ignored the smallest size in the icon scale and
+    /// drew itself bigger than the + in every other navigator.
     ///
     /// An `NSImage` carries its size as a property rather than as a layout
     /// constraint, and `NSMenuItem` honours it. So in menus the icon has to be

@@ -1,0 +1,757 @@
+{
+  "StoryOS/AppSettings.swift": {
+    "mtime": 1785020386.3194768,
+    "ast_hash": "ce592a73cc8f31988a6540bcbb0fe96e",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/AccentColor.colorset/Contents.json": {
+    "mtime": 1783877830.7228477,
+    "ast_hash": "55019f7265dde0a78318b0807f98e847",
+    "semantic_hash": "55019f7265dde0a78318b0807f98e847"
+  },
+  "StoryOS/Assets.xcassets/AppIcon.appiconset/Contents.json": {
+    "mtime": 1783981452.99568,
+    "ast_hash": "284e79f3134449b80d00d732a62a5b9b",
+    "semantic_hash": "284e79f3134449b80d00d732a62a5b9b"
+  },
+  "StoryOS/Assets.xcassets/Contents.json": {
+    "mtime": 1785013412.424971,
+    "ast_hash": "9deb2ada1cc834bbebf8bbad9c8978a1",
+    "semantic_hash": "9deb2ada1cc834bbebf8bbad9c8978a1"
+  },
+  "StoryOS/Components.swift": {
+    "mtime": 1785069011.3954713,
+    "ast_hash": "a9079b18ecbfdce6589f8e086719a4b9",
+    "semantic_hash": ""
+  },
+  "StoryOS/ContinuityChecker.swift": {
+    "mtime": 1784996344.5114934,
+    "ast_hash": "29df4136b008b2697c83d98493567c8e",
+    "semantic_hash": "29df4136b008b2697c83d98493567c8e"
+  },
+  "StoryOS/ExportService.swift": {
+    "mtime": 1785020386.320965,
+    "ast_hash": "29d4ad6e5df05627381a227c6e88bb16",
+    "semantic_hash": ""
+  },
+  "StoryOS/InlineMarkup.swift": {
+    "mtime": 1785020386.318761,
+    "ast_hash": "f86f23a2cef29e0b34299f2e4b86abd1",
+    "semantic_hash": ""
+  },
+  "StoryOS/ManuscriptEditor.swift": {
+    "mtime": 1785088377.9625645,
+    "ast_hash": "e4ed891f9fc3f9c89870d45c9f895fe2",
+    "semantic_hash": ""
+  },
+  "StoryOS/ManuscriptViews.swift": {
+    "mtime": 1785097218.1204627,
+    "ast_hash": "0789e22892c142e8570c95f0069a86fe",
+    "semantic_hash": ""
+  },
+  "StoryOS/Overlays.swift": {
+    "mtime": 1785020444.444862,
+    "ast_hash": "287e3de77d9caf497cb1d5e52665d3b7",
+    "semantic_hash": ""
+  },
+  "StoryOS/ProjectHistory.swift": {
+    "mtime": 1784996344.5312676,
+    "ast_hash": "8be7e6eba00f618ee8fa8e8c79827d31",
+    "semantic_hash": "8be7e6eba00f618ee8fa8e8c79827d31"
+  },
+  "StoryOS/ProjectRepository.swift": {
+    "mtime": 1785069809.0160024,
+    "ast_hash": "2d84d32e1a5af5b7fd4fcef14f909676",
+    "semantic_hash": ""
+  },
+  "StoryOS/ProseStyler.swift": {
+    "mtime": 1785012369.3488595,
+    "ast_hash": "4043eecf4d2323ebb2145ef0b485fc61",
+    "semantic_hash": ""
+  },
+  "StoryOS/RecentProjects.swift": {
+    "mtime": 1785005836.2311847,
+    "ast_hash": "f3e75818da18657de5ad80416a92401c",
+    "semantic_hash": ""
+  },
+  "StoryOS/SearchEngine.swift": {
+    "mtime": 1785020444.4458709,
+    "ast_hash": "1e500bbdfcf5111b301a84ded1b82d45",
+    "semantic_hash": ""
+  },
+  "StoryOS/SettingsView.swift": {
+    "mtime": 1785020596.1605446,
+    "ast_hash": "3a3e82d974696ba16f99e518e5c703a1",
+    "semantic_hash": ""
+  },
+  "StoryOS/StoryBrain.swift": {
+    "mtime": 1784996344.5494885,
+    "ast_hash": "a2edf18762347f361e9f04e15c93c495",
+    "semantic_hash": "a2edf18762347f361e9f04e15c93c495"
+  },
+  "StoryOS/StoryMetadata.swift": {
+    "mtime": 1785089650.5282114,
+    "ast_hash": "e582c86146b6218e93d4b622241a073f",
+    "semantic_hash": ""
+  },
+  "StoryOS/StoryModel.swift": {
+    "mtime": 1785025088.761596,
+    "ast_hash": "9c0c8c977471960d004ddc23dcce8826",
+    "semantic_hash": ""
+  },
+  "StoryOS/StoryThread.swift": {
+    "mtime": 1785020386.320771,
+    "ast_hash": "f7cd7c3ff3708a2fe203a75cedcf5db9",
+    "semantic_hash": ""
+  },
+  "StoryOS/StoryViews.swift": {
+    "mtime": 1785089650.529476,
+    "ast_hash": "5ad1a08763ae4eb78da495cc450d8064",
+    "semantic_hash": ""
+  },
+  "StoryOS/TextAnchor.swift": {
+    "mtime": 1784996344.5626676,
+    "ast_hash": "f6bf5f8378a96e6bc6f0f020da6df0cf",
+    "semantic_hash": "f6bf5f8378a96e6bc6f0f020da6df0cf"
+  },
+  "StoryOS/Theme.swift": {
+    "mtime": 1785068935.1019652,
+    "ast_hash": "5437b49aefc9799149043ef51daf813a",
+    "semantic_hash": ""
+  },
+  "StoryOS/ThreadViews.swift": {
+    "mtime": 1785068951.1531134,
+    "ast_hash": "3f582596b8b458ce7c56c77cbf93ff8f",
+    "semantic_hash": ""
+  },
+  "StoryOS/WorkspaceModel.swift": {
+    "mtime": 1785089650.5288417,
+    "ast_hash": "ead9101abb701fb47df6dbecdc6497da",
+    "semantic_hash": ""
+  },
+  "StoryOS/WorkspaceView.swift": {
+    "mtime": 1785097860.3517694,
+    "ast_hash": "f4e8ecc2b1b2797181cefbb5e65643a0",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/AppIcon.appiconset/icon_1024.png": {
+    "mtime": 1784993329.8377466,
+    "ast_hash": "ee30b01a3f1e591cfd57b9df8edd224a",
+    "semantic_hash": "ee30b01a3f1e591cfd57b9df8edd224a"
+  },
+  "StoryOS/Assets.xcassets/AppIcon.appiconset/icon_128.png": {
+    "mtime": 1784993329.5947008,
+    "ast_hash": "689b324dcdbb28f70a9143977e64025d",
+    "semantic_hash": "689b324dcdbb28f70a9143977e64025d"
+  },
+  "StoryOS/Assets.xcassets/AppIcon.appiconset/icon_16.png": {
+    "mtime": 1784993329.4454463,
+    "ast_hash": "afc7093075169714a04b89febab8afc5",
+    "semantic_hash": "afc7093075169714a04b89febab8afc5"
+  },
+  "StoryOS/Assets.xcassets/AppIcon.appiconset/icon_256.png": {
+    "mtime": 1784993329.6418326,
+    "ast_hash": "b6fc4d19cfedae5640824f721a959f23",
+    "semantic_hash": "b6fc4d19cfedae5640824f721a959f23"
+  },
+  "StoryOS/Assets.xcassets/AppIcon.appiconset/icon_32.png": {
+    "mtime": 1784993329.5002065,
+    "ast_hash": "8fa044b369a3329913c830a247bd3b0d",
+    "semantic_hash": "8fa044b369a3329913c830a247bd3b0d"
+  },
+  "StoryOS/Assets.xcassets/AppIcon.appiconset/icon_512.png": {
+    "mtime": 1784993329.7074816,
+    "ast_hash": "fc755e08e867c217df78857abcff0276",
+    "semantic_hash": "fc755e08e867c217df78857abcff0276"
+  },
+  "StoryOS/Assets.xcassets/AppIcon.appiconset/icon_64.png": {
+    "mtime": 1784993329.5491025,
+    "ast_hash": "b8314328dfe0104c123d1cd792b039d4",
+    "semantic_hash": "b8314328dfe0104c123d1cd792b039d4"
+  },
+  ".agents/rules/graphify.md": {
+    "mtime": 1784931826.4036086,
+    "ast_hash": "f1e53ecc9194573d3c28fc116c743a2e",
+    "semantic_hash": "f1e53ecc9194573d3c28fc116c743a2e"
+  },
+  ".agents/workflows/graphify.md": {
+    "mtime": 1784931826.4037316,
+    "ast_hash": "0bc020d491fca99550c1ea3de0a5f862",
+    "semantic_hash": "0bc020d491fca99550c1ea3de0a5f862"
+  },
+  "StoryOS/Markdown/BlockParser.swift": {
+    "mtime": 1784998819.9805334,
+    "ast_hash": "5c56f3a7a95dd3294d218ceb3738de6c",
+    "semantic_hash": "5c56f3a7a95dd3294d218ceb3738de6c"
+  },
+  "StoryOS/Markdown/HTMLToMarkdownConverter.swift": {
+    "mtime": 1785000091.272903,
+    "ast_hash": "6e7897fa80141390f0d4aef3584ae162",
+    "semantic_hash": "6e7897fa80141390f0d4aef3584ae162"
+  },
+  "StoryOS/Markdown/InlineParser.swift": {
+    "mtime": 1784998819.9813857,
+    "ast_hash": "6746ead7e8d4b42e071f780a2525be7a",
+    "semantic_hash": "6746ead7e8d4b42e071f780a2525be7a"
+  },
+  "StoryOS/Markdown/MarkdownAST.swift": {
+    "mtime": 1784998819.9817426,
+    "ast_hash": "105635710fc9ad226e49dc54b111affd",
+    "semantic_hash": "105635710fc9ad226e49dc54b111affd"
+  },
+  "StoryOS/Markdown/MarkdownInput.swift": {
+    "mtime": 1785000125.032729,
+    "ast_hash": "852217bfa6a25c1cbe9ee0f31958ac34",
+    "semantic_hash": "852217bfa6a25c1cbe9ee0f31958ac34"
+  },
+  "StoryOS/Markdown/MarkdownSyntax.swift": {
+    "mtime": 1784998613.8633351,
+    "ast_hash": "890d2f2905652319faec81ac71841331",
+    "semantic_hash": "890d2f2905652319faec81ac71841331"
+  },
+  "StoryOS/Presentation.swift": {
+    "mtime": 1785020386.319109,
+    "ast_hash": "56eb0a4a273b560af1d209a20bd3227b",
+    "semantic_hash": ""
+  },
+  "StoryOS/StartScreen.swift": {
+    "mtime": 1785021530.4010227,
+    "ast_hash": "9300d8b337cfc0681f53c3de34988d03",
+    "semantic_hash": ""
+  },
+  "StoryOS/StoryLoomApp.swift": {
+    "mtime": 1785017823.5510373,
+    "ast_hash": "ede90b01f64c2d08344bb1642d5fde91",
+    "semantic_hash": ""
+  },
+  "StoryOS/Markdown/NOTICE.md": {
+    "mtime": 1785003413.3371131,
+    "ast_hash": "acaebd159025b2538b3a84b62ec17f28",
+    "semantic_hash": ""
+  },
+  "StoryOS/Markdown/LICENSE-SwiftMarkdownEngine.txt": {
+    "mtime": 1785003413.310283,
+    "ast_hash": "edaa0b42d45c9ee2d2e107fde5b48d05",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/a-large-small.imageset/Contents.json": {
+    "mtime": 1785020244.266739,
+    "ast_hash": "40dcd97203710e23244bf279b34294ba",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/archive.imageset/Contents.json": {
+    "mtime": 1785020244.3566787,
+    "ast_hash": "e37f89b7dcecb77bfcbbd519502b9f85",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/arrow-left-right.imageset/Contents.json": {
+    "mtime": 1785020244.3848872,
+    "ast_hash": "2f14e52ed1ea6a05d361060bd74c8225",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/arrow-right.imageset/Contents.json": {
+    "mtime": 1785020355.6166828,
+    "ast_hash": "9620f3628da35f144c4dc212fde7e6bf",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/asterisk.imageset/Contents.json": {
+    "mtime": 1785020244.248702,
+    "ast_hash": "72e5c8767c273d6676cbbdad042122c1",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/badge-check.imageset/Contents.json": {
+    "mtime": 1785020355.6132648,
+    "ast_hash": "5b16b81b4df1e0e3ae747a7a54fe3954",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/bold.imageset/Contents.json": {
+    "mtime": 1785020244.2193258,
+    "ast_hash": "9716b3b4712c91b1af37917821759b23",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/book-copy.imageset/Contents.json": {
+    "mtime": 1785024640.4299917,
+    "ast_hash": "3d9073887588948bf1fc8a93672e79be",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/book-open-text.imageset/Contents.json": {
+    "mtime": 1785024640.4363265,
+    "ast_hash": "ceb28b41984f6f3ca7d68c01851ff4db",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/book-open.imageset/Contents.json": {
+    "mtime": 1785020244.2730715,
+    "ast_hash": "1fa605200bde3bea19aaa49adb6c678e",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/book.imageset/Contents.json": {
+    "mtime": 1785017487.648364,
+    "ast_hash": "cfe7a1116f8b61805546f6d1216394b0",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/bookmark.imageset/Contents.json": {
+    "mtime": 1785020244.4293625,
+    "ast_hash": "ce36cb1de910239021a5ef1ca86a1a46",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/box.imageset/Contents.json": {
+    "mtime": 1785020244.4215562,
+    "ast_hash": "e09d75d127d42a82640c6cc2768c1c86",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/building-2.imageset/Contents.json": {
+    "mtime": 1785020244.4248888,
+    "ast_hash": "e346644284fd3732b9e82b6927180b85",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/calendar-range.imageset/Contents.json": {
+    "mtime": 1785020244.3430393,
+    "ast_hash": "a2479611f305e80e53cb7cb94ae74ad7",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/calendar.imageset/Contents.json": {
+    "mtime": 1785020244.3399847,
+    "ast_hash": "3cd15a9aefd845129cfe1219810e5eb6",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/chart-no-axes-gantt.imageset/Contents.json": {
+    "mtime": 1785017487.6585119,
+    "ast_hash": "2de997dbee6ee11b856256c9ae1d5789",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/chevron-down.imageset/Contents.json": {
+    "mtime": 1785020244.3147678,
+    "ast_hash": "9860cb8dff6fa64f65acf0e1dc3f2146",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/chevron-right.imageset/Contents.json": {
+    "mtime": 1785020244.3122132,
+    "ast_hash": "83abf80e53a3d796b6fcd86cb31efb29",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/circle-arrow-down.imageset/Contents.json": {
+    "mtime": 1785020244.3290832,
+    "ast_hash": "4cc17fed67cde7fc5b9044b87cccbca0",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/circle-check.imageset/Contents.json": {
+    "mtime": 1785020244.3363588,
+    "ast_hash": "4970b8a17b1f8b51517ccb7e8c742210",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/circle-dashed.imageset/Contents.json": {
+    "mtime": 1785020244.325878,
+    "ast_hash": "0845810283eb3a18781d1120172a9aa8",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/circle-dot.imageset/Contents.json": {
+    "mtime": 1785020355.6062822,
+    "ast_hash": "aa9e8a441619dab5872e1767f8e1a21c",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/circle-ellipsis.imageset/Contents.json": {
+    "mtime": 1785020244.2986295,
+    "ast_hash": "72dfa24d1d86098f1e46352e1abb4ee3",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/circle-minus.imageset/Contents.json": {
+    "mtime": 1785020244.3913412,
+    "ast_hash": "0bca7a187d8befcab3e7993921f6d4cc",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/circle-off.imageset/Contents.json": {
+    "mtime": 1785020355.609732,
+    "ast_hash": "66a53255c8ab0ff272dd4a058469615d",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/circle-question-mark.imageset/Contents.json": {
+    "mtime": 1785017487.681318,
+    "ast_hash": "11f5c7128f184b56c0826278b8020815",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/circle-x.imageset/Contents.json": {
+    "mtime": 1785020244.3180306,
+    "ast_hash": "c71b78a8b8971699e234436165b497a0",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/circle.imageset/Contents.json": {
+    "mtime": 1785020355.602577,
+    "ast_hash": "feae2e9b54ed97c56dda1f2b4be5a6ab",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/clock-alert.imageset/Contents.json": {
+    "mtime": 1785020244.3461785,
+    "ast_hash": "3e9ee6f1ca97e37fdebe73480a032498",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/clock-check.imageset/Contents.json": {
+    "mtime": 1785020244.349438,
+    "ast_hash": "37d4c97fcbfd63fb131e1b011be83511",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/code-xml.imageset/Contents.json": {
+    "mtime": 1785020244.3959377,
+    "ast_hash": "45b6a4317e55b906be1002605de305fc",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/command.imageset/Contents.json": {
+    "mtime": 1785020244.38794,
+    "ast_hash": "ec143646329220f6d6ff2e03a09e45d1",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/contrast.imageset/Contents.json": {
+    "mtime": 1785020244.284994,
+    "ast_hash": "c2fe6b126db5a4747a0cefd89222df8b",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/crosshair.imageset/Contents.json": {
+    "mtime": 1785020244.376097,
+    "ast_hash": "03f59734dbaae53d66c91b43f5694e53",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/drama.imageset/Contents.json": {
+    "mtime": 1785020244.4324598,
+    "ast_hash": "4e7cb3d4168fc88b5208a800a3442c81",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/eclipse.imageset/Contents.json": {
+    "mtime": 1785017487.7072215,
+    "ast_hash": "e880aebe7f127bbe5f3adb95b37c129c",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/ellipsis.imageset/Contents.json": {
+    "mtime": 1785020244.3216765,
+    "ast_hash": "1e65f2038626294f5fe275fceb48b138",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/eye-off.imageset/Contents.json": {
+    "mtime": 1785020355.595093,
+    "ast_hash": "95c260367c96fa7a8e1dfcddd7f8de02",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/file-down.imageset/Contents.json": {
+    "mtime": 1785020244.4096386,
+    "ast_hash": "535c9bb7a3d3014dff19d9ebd56ab1b5",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/file-scan.imageset/Contents.json": {
+    "mtime": 1785020244.4053528,
+    "ast_hash": "449829bc0e65e17475e92d2ab4b1d6bf",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/file-text.imageset/Contents.json": {
+    "mtime": 1785020244.3990538,
+    "ast_hash": "417ab53f3f7cc814f43d142ba7548379",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/file-type.imageset/Contents.json": {
+    "mtime": 1785020244.4021757,
+    "ast_hash": "4c1be8a264c13331ebddc6c6b99543c2",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/folder-plus.imageset/Contents.json": {
+    "mtime": 1785020244.3041775,
+    "ast_hash": "80a07c13ccf1719b597b91e3d95b4440",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/folder.imageset/Contents.json": {
+    "mtime": 1785020244.3014605,
+    "ast_hash": "8d34a63efcea114c143872c0a59ca0fc",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/handshake.imageset/Contents.json": {
+    "mtime": 1785017487.6859581,
+    "ast_hash": "81cc8e7fcabde303ae17edcb83229d38",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/heading.imageset/Contents.json": {
+    "mtime": 1785020244.236137,
+    "ast_hash": "c5cfcb7cfc3cb5a74b50fa05e0d5a84e",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/heart-handshake.imageset/Contents.json": {
+    "mtime": 1785017487.698924,
+    "ast_hash": "0561dda5490adf7c06b7048d21ff9fa2",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/heart.imageset/Contents.json": {
+    "mtime": 1785020355.584355,
+    "ast_hash": "bc8d3bdae24bfb5687600dbe12c8108b",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/highlighter.imageset/Contents.json": {
+    "mtime": 1785020244.2331383,
+    "ast_hash": "831f54eac019aca17a4c4597c06c8d31",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/italic.imageset/Contents.json": {
+    "mtime": 1785020244.2234213,
+    "ast_hash": "5dfa51a2012c96ff747e45a24c8095b4",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/library-big.imageset/Contents.json": {
+    "mtime": 1785024640.4239798,
+    "ast_hash": "8166ef748d1c04342263538684d85217",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/library.imageset/Contents.json": {
+    "mtime": 1785017487.6536872,
+    "ast_hash": "e261d08f54cf20a33b1106a171d1649b",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/lightbulb.imageset/Contents.json": {
+    "mtime": 1785017487.7148945,
+    "ast_hash": "15ebc3a94085b523066ac0ee61a478ca",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/link-2.imageset/Contents.json": {
+    "mtime": 1785020244.3626966,
+    "ast_hash": "76a7e0995c2233f9aa90cbce6561a6c5",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/link.imageset/Contents.json": {
+    "mtime": 1785020244.3597312,
+    "ast_hash": "aa5ecea7f7869fcf8727b4dd3a479352",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/list-filter.imageset/Contents.json": {
+    "mtime": 1785020244.309541,
+    "ast_hash": "1f25abd5b5024b028cee2747ab03b60b",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/list-ordered.imageset/Contents.json": {
+    "mtime": 1785020244.2429917,
+    "ast_hash": "ea48aec9bd9cf1757e543bbe36c37bee",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/list-plus.imageset/Contents.json": {
+    "mtime": 1785017487.6682806,
+    "ast_hash": "e9ba5c87514eca2d55fb76243979c6c5",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/list.imageset/Contents.json": {
+    "mtime": 1785020244.2399054,
+    "ast_hash": "225b2a3e824336e15fee6e9cbaefa1d9",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/map-pin.imageset/Contents.json": {
+    "mtime": 1785020244.4180815,
+    "ast_hash": "79defccf25caab9370576618d29c18b8",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/maximize-2.imageset/Contents.json": {
+    "mtime": 1785020244.378681,
+    "ast_hash": "2b04c9da33b85e55cf3ca5e53101e482",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/message-square-text.imageset/Contents.json": {
+    "mtime": 1785020244.2699187,
+    "ast_hash": "86688f98eaa5730cd303cdb7d6a75ee9",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/minimize-2.imageset/Contents.json": {
+    "mtime": 1785020244.3816874,
+    "ast_hash": "1050816bee3e8ba956159648b197c03a",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/moon.imageset/Contents.json": {
+    "mtime": 1785020244.2821438,
+    "ast_hash": "82e250c1b3056fbdb0c792ab61b430fc",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/notebook-text.imageset/Contents.json": {
+    "mtime": 1785020244.290793,
+    "ast_hash": "5771150e62658936dc6769386af972e3",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/octagon-alert.imageset/Contents.json": {
+    "mtime": 1785020355.6202838,
+    "ast_hash": "d8bc4cab034b2c92549d341cdbeb15c6",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/panel-right.imageset/Contents.json": {
+    "mtime": 1785020244.295895,
+    "ast_hash": "5e27932a96d94871b69adb9f8a54a530",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/pen-line.imageset/Contents.json": {
+    "mtime": 1785020244.3658657,
+    "ast_hash": "d76cd04c0be33c2e1b9e9aedf122adf0",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/plus.imageset/Contents.json": {
+    "mtime": 1785020244.2879095,
+    "ast_hash": "f975299e894539940f7eb82bd05d2285",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/refresh-cw.imageset/Contents.json": {
+    "mtime": 1785020244.332681,
+    "ast_hash": "902f2fce88c2e366d916e543139f41dd",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/rotate-ccw-clock.imageset/Contents.json": {
+    "mtime": 1785017487.67696,
+    "ast_hash": "3793723c67a72a7193c8c14557fa74a4",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/rotate-ccw.imageset/Contents.json": {
+    "mtime": 1785020244.353082,
+    "ast_hash": "5e47d4c40932dcf0b29c246d26489761",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/save.imageset/Contents.json": {
+    "mtime": 1785020244.3722534,
+    "ast_hash": "f13644a66d059d5d97ea63406c85998b",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/scroll-text.imageset/Contents.json": {
+    "mtime": 1785020244.2762363,
+    "ast_hash": "8566c6181df778167c168cf803987225",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/search.imageset/Contents.json": {
+    "mtime": 1785017487.7185454,
+    "ast_hash": "48657990752a669d5f9e6ec12d36f784",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/settings.imageset/Contents.json": {
+    "mtime": 1785020244.3067605,
+    "ast_hash": "1b9bb7f85d3e123459148c62e7adb332",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/share.imageset/Contents.json": {
+    "mtime": 1785020244.3689919,
+    "ast_hash": "a2e961ca4ec598896c7d91d509374ac2",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/slash.imageset/Contents.json": {
+    "mtime": 1785020355.5988607,
+    "ast_hash": "ff11cee61a9e6430d24c40b05be2d90b",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/sprout.imageset/Contents.json": {
+    "mtime": 1785017487.7032347,
+    "ast_hash": "434d9d31a29c2caffa0e60469eee1bba",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/square-pen.imageset/Contents.json": {
+    "mtime": 1785020244.2934427,
+    "ast_hash": "6eda3c5464733227bca74701574d6958",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/strikethrough.imageset/Contents.json": {
+    "mtime": 1785020244.2298286,
+    "ast_hash": "89c02801695625eefb59196b703936de",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/sun.imageset/Contents.json": {
+    "mtime": 1785020244.2793753,
+    "ast_hash": "b1afe919f66e45e491caf7e37bf9e661",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/swords.imageset/Contents.json": {
+    "mtime": 1785017487.7111628,
+    "ast_hash": "58e6c57627db1cd57b0252060f508124",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/target.imageset/Contents.json": {
+    "mtime": 1785017487.694813,
+    "ast_hash": "71cf5f11685be6e2a2e9e2e81c9e9279",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/text-align-center.imageset/Contents.json": {
+    "mtime": 1785020244.254606,
+    "ast_hash": "105b4586152ddbe5c98eec54abb66843",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/text-align-end.imageset/Contents.json": {
+    "mtime": 1785020244.2573156,
+    "ast_hash": "3f3d6b9df7abcd685b06ed72306e4287",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/text-align-justify.imageset/Contents.json": {
+    "mtime": 1785020244.2602768,
+    "ast_hash": "af47a273b8856d8db815f51758d7c60a",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/text-align-start.imageset/Contents.json": {
+    "mtime": 1785020244.2515492,
+    "ast_hash": "b89b07b311d7fc32d04b6c9c50093b4d",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/text-quote.imageset/Contents.json": {
+    "mtime": 1785020244.2458644,
+    "ast_hash": "52554a5c0349a78bf691db315e1221b6",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/trash-2.imageset/Contents.json": {
+    "mtime": 1785017487.67257,
+    "ast_hash": "101238280485788d0a3f7ba6089a6916",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/triangle-alert.imageset/Contents.json": {
+    "mtime": 1785017487.6906013,
+    "ast_hash": "d0321237fbe86a5617d310c2d6cb1130",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/type.imageset/Contents.json": {
+    "mtime": 1785020244.2636564,
+    "ast_hash": "4592bcbfbc589958021ce308e8c1e296",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/underline.imageset/Contents.json": {
+    "mtime": 1785020244.2267199,
+    "ast_hash": "ffd883005c0941e6d6ab6a82cbc41372",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/user.imageset/Contents.json": {
+    "mtime": 1785020244.4149644,
+    "ast_hash": "b668efdc6e219b017d032401cb7d9e07",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/users.imageset/Contents.json": {
+    "mtime": 1785020355.578678,
+    "ast_hash": "d444e1a083c8185715c20ab1a5b7a13a",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/workflow.imageset/Contents.json": {
+    "mtime": 1785017487.6635332,
+    "ast_hash": "a99121eb5836240e9c4ee9c4b7ea4fe2",
+    "semantic_hash": ""
+  },
+  "StoryOS/Assets.xcassets/zap.imageset/Contents.json": {
+    "mtime": 1785020355.590655,
+    "ast_hash": "932c570c9a5a149122fb443fd5e2f4b5",
+    "semantic_hash": ""
+  },
+  "StoryOS/Binder.swift": {
+    "mtime": 1785024694.69068,
+    "ast_hash": "2d8a491b17a42736bf07e8bba5a7cbfe",
+    "semantic_hash": ""
+  },
+  "StoryOS/BinderMenu.swift": {
+    "mtime": 1785087109.6670043,
+    "ast_hash": "b8bffd94660de5054801c861738f19d9",
+    "semantic_hash": ""
+  },
+  "StoryOS/BinderViews.swift": {
+    "mtime": 1785088666.797236,
+    "ast_hash": "220b996d6979ee3ef0840e7acfd98def",
+    "semantic_hash": ""
+  },
+  "StoryOS/HistoryViews.swift": {
+    "mtime": 1785020596.1613278,
+    "ast_hash": "9cc26d8fd12b25d8f4a60a418dac71fc",
+    "semantic_hash": ""
+  },
+  "StoryOS/Trash.swift": {
+    "mtime": 1785087608.3212938,
+    "ast_hash": "a103dc0433833a402fdc701230785b95",
+    "semantic_hash": ""
+  },
+  "StoryOS/TrashViews.swift": {
+    "mtime": 1785087622.9832354,
+    "ast_hash": "46e17e488fbeb8b121cda224a648c7ef",
+    "semantic_hash": ""
+  }
+}

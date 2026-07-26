@@ -194,21 +194,27 @@ struct ManuscriptEditor: NSViewRepresentable {
     func updateNSView(_ scrollView: ManuscriptScrollView, context: Context) {
         let coordinator = context.coordinator
         coordinator.parent = self
+        var alreadyRefreshed = false
 
         if coordinator.documentID != documentID {
             coordinator.load(text: text, documentID: documentID)
+            alreadyRefreshed = true
         } else if coordinator.textView?.string != text {
             coordinator.replaceTextPreservingCaret(with: text)
         }
 
         if coordinator.style != style {
             coordinator.apply(style: style)
+            alreadyRefreshed = true
         }
         if coordinator.behaviour != behaviour {
             coordinator.apply(behaviour: behaviour)
         }
 
-        coordinator.refreshDecorations()
+        // Loading and applying a style both finish by repainting decorations.
+        // Repeating that full-document pass immediately afterwards delayed scene
+        // switches for no visual benefit.
+        if !alreadyRefreshed { coordinator.refreshDecorations() }
         coordinator.perform(reveal: reveal)
         coordinator.perform(command: command)
     }
@@ -245,6 +251,8 @@ struct ManuscriptEditor: NSViewRepresentable {
         private var revealRange: NSRange?
         private var revealDismissal: Task<Void, Never>?
         private var shouldOfferMentions = false
+        private var hasCommentDecorations = false
+        private var hasFocusDimming = false
 
         init(_ parent: ManuscriptEditor) {
             self.parent = parent
@@ -463,8 +471,15 @@ struct ManuscriptEditor: NSViewRepresentable {
 
         private func updateCommentWashes() {
             guard let textView, let layoutManager, let full = documentTextRange else { return }
+            let needsWashes = !parent.commentAnchors.isEmpty || revealRange != nil
+            // Removing a rendering attribute over an entire manuscript is not
+            // free. Most scene switches have neither comments nor a reveal, so
+            // leave the clean document alone unless a previous scene actually
+            // painted a wash that now needs clearing.
+            guard needsWashes || hasCommentDecorations else { return }
             let length = (textView.string as NSString).length
             layoutManager.removeRenderingAttribute(.backgroundColor, for: full)
+            hasCommentDecorations = needsWashes
 
             for anchor in parent.commentAnchors {
                 guard let resolved = anchor.resolve(in: textView.string),
@@ -480,11 +495,16 @@ struct ManuscriptEditor: NSViewRepresentable {
 
         private func updateFocusDimming() {
             guard let textView, let layoutManager, let full = documentTextRange else { return }
+            let needsDimming = style.focus != .off
+            // As above, do not sweep the whole document's foreground attributes
+            // when focus mode is off and the previous scene did not use it.
+            guard needsDimming || hasFocusDimming else { return }
 
             let string = textView.string as NSString
             layoutManager.removeRenderingAttribute(.foregroundColor, for: full)
+            hasFocusDimming = needsDimming
 
-            guard style.focus != .off,
+            guard needsDimming,
                   let focus = ProseStyler.focusRange(in: string, selection: textView.selectedRange(), depth: style.focus)
             else { return }
 

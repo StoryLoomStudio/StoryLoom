@@ -387,6 +387,21 @@ nonisolated struct StoryNote: Identifiable, Codable, Hashable, Sendable {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? "Untitled Note" : trimmed
     }
+
+    /// Notes are for thinking, not quotas, but their length is useful in a
+    /// dense list when deciding which fragment is which.
+    var wordCount: Int {
+        body.split { $0.isWhitespace || $0.isNewline }.count
+    }
+
+    /// The first non-empty line gives a note row a recognisable shape without
+    /// turning the navigator into a second editor.
+    var preview: String {
+        let line = body.split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { !$0.isEmpty } ?? ""
+        return line.isEmpty ? "No content yet" : line
+    }
 }
 
 // MARK: - Finding dispositions

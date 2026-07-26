@@ -28,7 +28,22 @@ final class WorkspaceModel: ObservableObject {
     // MARK: Selection
 
     @Published var library: LibraryItem = .manuscript
-    @Published var selectedDocumentID: StoryDocument.ID?
+    /// Which scene is open in the editor.
+    ///
+    /// The binder's highlight follows it, never the other way round: opening a
+    /// scene from search, from a finding, or from undo's repair must move the
+    /// outline's selection with it, or the author is looking at a highlighted
+    /// row that is not the page in front of them.
+    @Published var selectedDocumentID: StoryDocument.ID? {
+        didSet { if selectedDocumentID != nil { selectedBinderID = selectedDocumentID } }
+    }
+    /// Which *row* of the binder is selected — a scene or a folder.
+    ///
+    /// Separate from `selectedDocumentID` because a folder is a legitimate thing
+    /// to have selected and not a thing that can be edited. Clicking a chapter
+    /// highlights it, aims Rename and New Scene at it, and leaves the scene on
+    /// screen exactly where it was.
+    @Published var selectedBinderID: UUID?
     @Published var selectedThreadID: StoryThread.ID?
     @Published var selectedEntityID: StoryEntity.ID?
     @Published var selectedEventID: StoryEvent.ID?
@@ -84,6 +99,13 @@ final class WorkspaceModel: ObservableObject {
     private var lastSnapshotAt: Date?
     private var fingerprint: String?
     private var sessionBaseline: Int
+    private var folderWatch: [DispatchSourceFileSystemObject] = []
+    private var folderSettle: Task<Void, Never>?
+    /// Files taken in from the folder that StoryLoom has not yet written out as
+    /// scenes of its own. Handed to the next save, which absorbs them; held here
+    /// until then, so a crash before that save leaves the author's file exactly
+    /// where they put it.
+    private var pendingAdoptions: Set<String> = []
 
     init(
         project: StoryProject? = nil,
@@ -245,6 +267,24 @@ final class WorkspaceModel: ObservableObject {
         mutate("Change Project Word Target") { $0.story.projectWordTarget = max(0, target) }
     }
 
+    /// A new scene dropped straight into a folder, for the binder's own menus.
+    func createScene(inFolder folder: UUID) {
+        let document = StoryDocument(
+            title: "Untitled Scene",
+            chapter: project.binder.find(folder)?.name ?? "",
+            kind: .scene,
+            text: "",
+            status: .draft
+        )
+        mutate("New Scene") { project in
+            project.documents.append(document)
+            project.binder.insert(.document(document.id), into: folder, at: nil)
+            project.applyBinderOrder()
+        }
+        library = .manuscript
+        selectedDocumentID = document.id
+    }
+
     /// A new scene at the end of a named chapter, for the outline's own menus.
     func createScene(in chapter: StoryProject.Chapter) {
         guard let last = chapter.documents.last else { return }
@@ -268,6 +308,14 @@ final class WorkspaceModel: ObservableObject {
     }
 
     func createScene(kind: DocumentKind = .scene) {
+        // A selected folder is a request: the author clicked the chapter they
+        // want the scene in. Only a scene selection falls through to "beside
+        // whatever is open".
+        if kind == .scene, let folder = selectedBinderID, project.binder.find(folder)?.isFolder == true {
+            createScene(inFolder: folder)
+            return
+        }
+
         let chapter = selectedDocument?.chapter ?? project.documents.last?.chapter ?? "Chapter One"
         let document = StoryDocument(
             title: kind == .scene ? "Untitled Scene" : "Untitled Note",
@@ -277,6 +325,15 @@ final class WorkspaceModel: ObservableObject {
             status: .draft
         )
         mutate("New Scene") { project in
+            // Into the binder beside whatever is selected, so a new scene lands
+            // in the chapter the author is working in rather than at the end of
+            // the book. Appending to `documents` alone would leave the tree to
+            // pick it up during reconciliation, which puts it last.
+            if let id = self.selectedDocumentID, let place = project.binder.location(of: id) {
+                project.binder.insert(.document(document.id), into: place.parent, at: place.index + 1)
+            } else {
+                project.binder.insert(.document(document.id), into: nil, at: nil)
+            }
             if let id = self.selectedDocumentID,
                let position = project.documents.firstIndex(where: { $0.id == id }) {
                 project.documents.insert(document, at: position + 1)
@@ -365,6 +422,200 @@ final class WorkspaceModel: ObservableObject {
         scheduleReindex()
     }
 
+    // MARK: - Binder
+
+    /// A new folder, beside or inside whatever is selected.
+    ///
+    /// It starts empty and stays empty until something is dragged in, which is
+    /// the entire reason the binder is a tree and not a grouping rule.
+    @discardableResult
+    func createGroup(_ group: GroupKind, inside parent: UUID? = nil) -> UUID {
+        let folder = BinderItem.folder("New \(group.title)", [], group: group)
+        // The add menu works from the current binder selection. A selected
+        // Chapter, Part, or Volume is an unambiguous request to create inside
+        // it; falling back to the manuscript root made a newly created chapter
+        // appear somewhere the author was not looking.
+        let destination = parent ?? selectedBinderID.flatMap { id in
+            project.binder.find(id)?.isFolder == true ? id : nil
+        }
+        mutate("New \(group.title)") { project in
+            project.binder.insert(folder, into: destination, at: nil)
+        }
+        selectedBinderID = folder.id
+        renamingBinderID = folder.id
+        return folder.id
+    }
+
+    /// Changes what a group means without touching what is in it.
+    ///
+    /// Children, order, prose and metadata all sit below this line and none of
+    /// them are consulted: promoting a Chapter to a Part is a change of word and
+    /// icon, nothing else. A conversion that reshuffled its contents would make
+    /// the author afraid to try it.
+    func changeGroupType(_ id: UUID, to group: GroupKind) {
+        mutate("Change Type") { $0.binder.setGroup(id, to: group) }
+    }
+
+    /// Deep-copies a group: its subtree, and a fresh copy of every scene in it.
+    func duplicateGroup(_ id: UUID) {
+        guard let original = project.binder.find(id), original.isFolder else { return }
+        mutate("Duplicate") { project in
+            var copies: [StoryDocument] = []
+            func clone(_ item: BinderItem) -> BinderItem {
+                switch item.kind {
+                case .document:
+                    guard let source = project.documents.first(where: { $0.id == item.id }) else {
+                        return .document(UUID())
+                    }
+                    var copy = source
+                    copy.id = UUID()
+                    copies.append(copy)
+                    return .document(copy.id)
+                case .folder:
+                    var copy = item
+                    copy.id = UUID()
+                    copy.children = item.children.map(clone)
+                    return copy
+                }
+            }
+            var duplicate = clone(original)
+            duplicate.name = original.displayName + " copy"
+            project.documents.append(contentsOf: copies)
+            let place = project.binder.location(of: id)
+            project.binder.insert(duplicate, into: place?.parent, at: place.map { $0.index + 1 })
+            project.applyBinderOrder()
+        }
+        scheduleReindex()
+    }
+
+    /// Moves an item so it lands immediately above or below `sibling`.
+    ///
+    /// The destination is resolved *after* the item has been lifted out, because
+    /// removing it shifts every later sibling up by one — computing the index
+    /// first is exactly how a drop ends up one row from where it was aimed.
+    @discardableResult
+    func moveBinderItem(_ id: UUID, beside sibling: UUID, below: Bool) -> Bool {
+        guard id != sibling else { return false }
+        if project.binder.contains(sibling, under: id) { return false }
+
+        var moved = false
+        mutate("Move in Binder") { project in
+            guard let item = project.binder.remove(id) else { return }
+            guard let place = project.binder.location(of: sibling) else {
+                project.binder.insert(item, into: nil, at: nil)
+                moved = true
+                return
+            }
+            project.binder.insert(item, into: place.parent, at: place.index + (below ? 1 : 0))
+            project.applyBinderOrder()
+            moved = true
+        }
+        if moved { scheduleReindex() }
+        return moved
+    }
+
+    /// Every group, flattened with its depth, for a "Move To…" menu.
+    var groupDestinations: [(id: UUID, depth: Int, item: BinderItem)] {
+        var out: [(UUID, Int, BinderItem)] = []
+        func walk(_ items: [BinderItem], _ depth: Int) {
+            for item in items where item.isFolder {
+                out.append((item.id, depth, item))
+                walk(item.children, depth + 1)
+            }
+        }
+        walk(project.binder, 0)
+        return out
+    }
+
+    /// Selects a row of the outline. A scene also becomes the open scene; a
+    /// folder does not disturb whatever is being written.
+    func selectBinderRow(_ id: UUID?) {
+        selectedBinderID = id
+        if let id, project.document(id) != nil { selectedDocumentID = id }
+    }
+
+    /// What is currently being dragged in the binder, for the length of the drag.
+    ///
+    /// Not `@Published`: the pointer moving across an outline must not redraw it,
+    /// and nothing on screen depends on this value — the drop indicator is the
+    /// row's own state. See `BinderDrag` for why the id lives here at all.
+    var draggingBinderID: UUID?
+
+    /// Which row is being renamed in place. The outline watches this so a folder
+    /// made from a menu opens straight into an editable field — naming it is the
+    /// next thing the author was going to do anyway.
+    @Published var renamingBinderID: UUID?
+
+    func renameBinderItem(_ id: UUID, to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if project.documents.contains(where: { $0.id == id }) {
+            mutate("Rename Scene") { project in
+                guard let position = project.documents.firstIndex(where: { $0.id == id }) else { return }
+                project.documents[position].title = trimmed
+            }
+        } else {
+            mutate("Rename Folder") { $0.binder.rename(id, to: trimmed) }
+        }
+    }
+
+    /// Moves an item in the tree. Returns false when the drop is refused.
+    ///
+    /// The one refusal that matters is dropping a folder into its own subtree:
+    /// the move would detach that whole branch from the root and the author
+    /// would watch half their book disappear. Everything else is allowed,
+    /// including dragging a scene out of every folder to the top level.
+    @discardableResult
+    func moveBinderItem(_ id: UUID, into parent: UUID?, at index: Int?) -> Bool {
+        guard id != parent else { return false }
+        if let parent, project.binder.contains(parent, under: id) { return false }
+
+        mutate("Move in Binder") { project in
+            guard let item = project.binder.remove(id) else { return }
+            project.binder.insert(item, into: parent, at: index)
+            project.applyBinderOrder()
+        }
+        scheduleReindex()
+        return true
+    }
+
+    /// Deletes a folder. Its contents come with it — scenes into the trash,
+    /// where they can be put back one at a time.
+    func deleteFolder(_ id: UUID) {
+        guard let folder = project.binder.find(id), folder.isFolder else { return }
+        mutate("Move to Trash") { project in
+            guard let removed = project.binder.remove(id) else { return }
+            let doomed = removed.children.documentIDs
+            var carried: [StoryDocument] = []
+            for documentID in doomed {
+                guard let position = project.documents.firstIndex(where: { $0.id == documentID }) else { continue }
+                carried.append(project.documents.remove(at: position))
+            }
+            project.story.trash.insert(TrashedItem(payload: .group(removed, carried)), at: 0)
+            project.applyBinderOrder()
+        }
+        // The scenes inside it went to the trash with it, and one of them may be
+        // the scene on screen.
+        repairSelection()
+        scheduleReindex()
+    }
+
+    /// The drag-to-trash entry point for the binder. It deliberately delegates
+    /// to the existing deletion methods so a scene remains a scene-sized trash
+    /// entry and a folder remains one restorable subtree with all its scenes.
+    @discardableResult
+    func trashBinderItem(_ id: UUID) -> Bool {
+        guard let item = project.binder.find(id) else { return false }
+        switch item.kind {
+        case .document:
+            guard let document = project.document(id) else { return false }
+            deleteDocument(document)
+        case .folder:
+            deleteFolder(id)
+        }
+        return true
+    }
+
     // MARK: - Outline
 
     /// Moves scenes to a new place in the running order.
@@ -408,55 +659,9 @@ final class WorkspaceModel: ObservableObject {
         }
     }
 
-    /// Renames a chapter wherever that exact run of scenes sits.
-    func renameChapter(_ chapter: StoryProject.Chapter, to name: String) {
-        let ids = Set(chapter.documents.map(\.id))
-        mutate("Rename Chapter") { project in
-            for position in project.documents.indices where ids.contains(project.documents[position].id) {
-                project.documents[position].chapter = name
-            }
-        }
-    }
 
-    func renameVolume(_ volume: StoryProject.Volume, to name: String) {
-        let ids = Set(volume.documents.map(\.id))
-        mutate("Rename Volume") { project in
-            for position in project.documents.indices where ids.contains(project.documents[position].id) {
-                project.documents[position].volume = name
-            }
-        }
-    }
 
-    /// Starts a new chapter at the end of the manuscript, with one scene in it —
-    /// an empty chapter has nothing to hold its place in the running order,
-    /// because the order lives in the scenes.
-    func createChapter(named name: String = "New Chapter", in volume: String = "") {
-        let scene = StoryDocument(
-            title: "Untitled Scene",
-            volume: volume,
-            chapter: name,
-            kind: .scene,
-            text: "",
-            status: .draft
-        )
-        mutate("New Chapter") { $0.documents.append(scene) }
-        library = .manuscript
-        selectedDocumentID = scene.id
-    }
 
-    func createVolume(named name: String = "New Volume") {
-        let scene = StoryDocument(
-            title: "Untitled Scene",
-            volume: name,
-            chapter: "Chapter One",
-            kind: .scene,
-            text: "",
-            status: .draft
-        )
-        mutate("New Volume") { $0.documents.append(scene) }
-        library = .manuscript
-        selectedDocumentID = scene.id
-    }
 
     // MARK: - Editor commands
 
@@ -794,6 +999,15 @@ final class WorkspaceModel: ObservableObject {
         scheduleAutosave()
     }
 
+    func duplicateNote(_ note: StoryNote) {
+        var copy = note
+        copy.id = UUID()
+        copy.title = "\(note.displayTitle) Copy"
+        copy.updatedAt = .stamp
+        mutate("Duplicate Note") { $0.story.notes.append(copy) }
+        selectedNoteID = copy.id
+    }
+
     func deleteNote(_ id: StoryNote.ID) {
         mutate("Delete Note") { project in
             guard let position = project.story.notes.firstIndex(where: { $0.id == id }) else { return }
@@ -821,6 +1035,15 @@ final class WorkspaceModel: ObservableObject {
                 // index, for the same reason everything else here is: the index
                 // recorded at deletion is a lie the moment anything else moves.
                 project.documents.append(value)
+                project.binder.insert(.document(value.id), into: nil, at: nil)
+                project.applyBinderOrder()
+            case .group(let item, let documents):
+                // The subtree comes back intact, at the top level. Its old
+                // parent may itself be in the trash by now, so re-attaching to
+                // it would be guessing.
+                project.documents.append(contentsOf: documents)
+                project.binder.insert(item, into: nil, at: nil)
+                project.applyBinderOrder()
             case .thread(let value):
                 project.story.threads.append(value)
             case .entity(let value):
@@ -1100,14 +1323,78 @@ final class WorkspaceModel: ObservableObject {
 
     // MARK: - External changes
 
-    /// Checked when the app regains focus rather than through a file presenter,
-    /// which would otherwise spend its life reacting to our own writes.
+    /// Checked when the app regains focus, and whenever the manuscript folder
+    /// itself changes — never through a file presenter, which would spend its
+    /// life reacting to our own writes.
     func checkForExternalChanges() {
         guard let projectURL, let known = fingerprint, persistence != .saving else { return }
         Task {
             let current = await repository.fingerprint(at: projectURL)
             guard current != known, externalChange == nil else { return }
             externalChange = ExternalChange(fingerprint: current)
+        }
+    }
+
+    /// Watches `manuscript/` and `archive/` for the length of the session.
+    ///
+    /// A Markdown project is one an author is *expected* to reach into: a file
+    /// dropped in from Finder, a scene written on a phone and synced back, a
+    /// branch checked out underneath the application. Waiting for the window to
+    /// regain focus catches all of that eventually; watching the folder catches
+    /// it while the author is still looking at the screen, which is when the
+    /// question "where did my file go" gets asked.
+    ///
+    /// A directory's vnode reports files arriving, leaving and being renamed —
+    /// and most editors save by writing a temporary file and renaming it over
+    /// the old one, so an edit to an existing scene usually shows up here too.
+    /// The focus check remains for the ones that do not.
+    private func watchProjectFolder(_ url: URL) {
+        stopWatchingProjectFolder()
+
+        for directory in ["manuscript", "archive"] {
+            let path = url.appending(path: directory).path
+            let descriptor = Darwin.open(path, O_EVTONLY)
+            guard descriptor >= 0 else { continue }
+
+            let source = DispatchSource.makeFileSystemObjectSource(
+                fileDescriptor: descriptor,
+                eventMask: [.write, .rename, .delete, .extend],
+                queue: .global(qos: .utility)
+            )
+            source.setEventHandler { [weak self] in
+                Task { @MainActor in self?.projectFolderChanged() }
+            }
+            source.setCancelHandler { Darwin.close(descriptor) }
+            source.resume()
+            folderWatch.append(source)
+        }
+    }
+
+    private func stopWatchingProjectFolder() {
+        folderWatch.forEach { $0.cancel() }
+        folderWatch.removeAll()
+        folderSettle?.cancel()
+        folderSettle = nil
+    }
+
+    /// Waits for the dust to settle before looking.
+    ///
+    /// A single save from another application is several events, and one of our
+    /// own autosaves is a whole directory rewritten. Both would otherwise put a
+    /// banner in front of the author for something that had not finished
+    /// happening yet — so the check waits until the folder has been quiet, and
+    /// waits again if StoryLoom is the one making the noise.
+    private func projectFolderChanged() {
+        folderSettle?.cancel()
+        folderSettle = Task { [weak self] in
+            for _ in 0..<3 {
+                try? await Task.sleep(for: .seconds(1.5))
+                guard !Task.isCancelled, let self else { return }
+                guard self.persistence == .saving else {
+                    self.checkForExternalChanges()
+                    return
+                }
+            }
         }
     }
 
@@ -1126,7 +1413,7 @@ final class WorkspaceModel: ObservableObject {
 
     // MARK: - Private
 
-    private func adopt(_ url: URL, _ load: @escaping () async throws -> StoryProject) {
+    private func adopt(_ url: URL, _ load: @escaping () async throws -> ProjectLoad) {
         let previous = securityScopedURL
         securityScopedURL?.stopAccessingSecurityScopedResource()
         _ = url.startAccessingSecurityScopedResource()
@@ -1138,9 +1425,9 @@ final class WorkspaceModel: ObservableObject {
                 let loaded = try await load()
                 let interrupted = await repository.hasInterruptedWrite(at: url)
 
-                project = loaded
+                project = loaded.project
                 projectURL = url
-                sessionBaseline = loaded.totalWordCount
+                sessionBaseline = loaded.project.totalWordCount
                 history = try await repository.loadSnapshots(at: url)
                 selectedSnapshotID = history.first?.id
                 lastSnapshotAt = history.first?.createdAt
@@ -1152,6 +1439,19 @@ final class WorkspaceModel: ObservableObject {
                 rebuildDerived()
                 recents.remember(url)
                 undoManager?.removeAllActions()
+                watchProjectFolder(url)
+
+                if !loaded.adopted.isEmpty {
+                    // Written back at once, so the files stop being strays: they
+                    // get their front matter, a place in the manifest, and a row
+                    // in the binder that survives the next launch. The binder is
+                    // the useful confirmation; a technical banner would merely
+                    // make the author dismiss the same information twice.
+                    pendingAdoptions = Set(loaded.adopted)
+                    scheduleAutosave()
+                } else {
+                    pendingAdoptions = []
+                }
 
                 if interrupted {
                     recoveryNotice = "The last save to this project did not finish. Its files are intact and were loaded normally — but if anything is missing, History has a save point from before that write."
@@ -1238,6 +1538,11 @@ final class WorkspaceModel: ObservableObject {
         if selectedDocumentID == nil || project.document(selectedDocumentID!) == nil {
             selectedDocumentID = project.documents.first?.id
         }
+        // A folder that has been deleted, or undone back out of existence, must
+        // not leave the outline pointing at a row that is not there.
+        if let id = selectedBinderID, project.binder.find(id) == nil {
+            selectedBinderID = selectedDocumentID
+        }
         if selectedThreadID == nil || project.thread(selectedThreadID!) == nil {
             selectedThreadID = project.story.threads.first?.id
         }
@@ -1308,9 +1613,14 @@ final class WorkspaceModel: ObservableObject {
         let snapshot = project
         persistence = .saving
 
+        let claiming = pendingAdoptions
+
         Task {
             do {
-                try await repository.save(snapshot, to: projectURL)
+                try await repository.save(snapshot, to: projectURL, claiming: claiming)
+                // Those files are now scenes, written under StoryLoom's own
+                // names. Cleared only on the way out of a save that worked.
+                pendingAdoptions.subtract(claiming)
                 fingerprint = await repository.fingerprint(at: projectURL)
 
                 // Only claim "saved" if nothing changed while we were writing.

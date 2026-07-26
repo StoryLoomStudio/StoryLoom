@@ -20,6 +20,22 @@
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
+			<!--
+				The drag type for a row in the manuscript binder. Declared so the
+				pasteboard type is registered rather than invented at runtime —
+				an undeclared exported type still works, noisily, and only until
+				something else claims the same string.
+			-->
+			<key>UTTypeIdentifier</key>
+			<string>io.storyloom.binder-item</string>
+			<key>UTTypeDescription</key>
+			<string>StoryLoom Binder Item</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+		</dict>
+		<dict>
 			<key>UTTypeIdentifier</key>
 			<string>io.storyloom.project</string>
 			<key>UTTypeDescription</key>

@@ -1,13 +1,18 @@
 # Graph Report - StoryOS  (2026-07-26)
 
 ## Corpus Check
-- 42 files · ~83,914 words
+- 143 files · ~102,598 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1325 nodes · 3781 edges · 57 communities (53 shown, 4 thin omitted)
-- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 155 edges (avg confidence: 0.8)
+- 1630 nodes · 4487 edges · 57 communities (50 shown, 7 thin omitted)
+- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 181 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `209de6c2`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - Community 0
@@ -49,36 +54,36 @@
 - Overlays.swift
 - FindingSeverity
 - FindingKind
-- Hashable
+- ThreadKind
 - WorkspaceView.swift
-- WindowConfigurator
+- AppCommands
 - Date
 - Community 43
 - CodingKeys
 - WorkspaceView
 - Community 46
-- .updateNSView
-- WorkspaceSheet
-- Community 55
+- WorkspaceView.swift
+- ProseStyler.swift
+- .edit
+- FlowLayout
 - Community 57
 - Community 76
-- Community 118
 - Community 125
 - Community 126
 - Community 130
 - Community 133
 
 ## God Nodes (most connected - your core abstractions)
-1. `WorkspaceModel` - 172 edges
-2. `NSRange` - 117 edges
-3. `StoryProject` - 73 edges
-4. `StoryDocument` - 60 edges
-5. `Coordinator` - 42 edges
-6. `InlineParser` - 38 edges
-7. `ProseStyle` - 36 edges
-8. `StoryEntity` - 36 edges
-9. `ManuscriptTextView` - 35 edges
-10. `AppSettings` - 31 edges
+1. `WorkspaceModel` - 204 edges
+2. `Glyph` - 123 edges
+3. `NSRange` - 118 edges
+4. `StoryProject` - 86 edges
+5. `StoryDocument` - 66 edges
+6. `Coordinator` - 42 edges
+7. `InlineParser` - 38 edges
+8. `StoryEntity` - 38 edges
+9. `ProseStyle` - 36 edges
+10. `ManuscriptTextView` - 35 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `ExportPanel` --calls--> `ExportProfile`  [INFERRED]
@@ -95,135 +100,131 @@
 ## Import Cycles
 - None detected.
 
-## Communities (57 total, 4 thin omitted)
+## Communities (57 total, 7 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.08
-Nodes (12): Error, InspectorPane, ExternalChange, Bool, Double, Int, Never, Task (+4 more)
+Cohesion: 0.11
+Nodes (7): DispatchSourceFileSystemObject, Bool, Double, Never, Set, WorkspaceModel, UndoManager
 
 ### Community 1 - "Community 1"
 Cohesion: 0.20
 Nodes (8): Character, HTMLToMarkdownConverter, Node, String, Bool, Int, Set, String
 
 ### Community 2 - "Community 2"
-Cohesion: 0.10
-Nodes (22): AppKit, InlineFormat, emphasis, highlight, strikethrough, strong, InlineMarkup, MarkerRun (+14 more)
+Cohesion: 0.11
+Nodes (21): InlineFormat, emphasis, highlight, strikethrough, strong, InlineMarkup, MarkerRun, Markers (+13 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.12
-Nodes (26): BarDivider, EditorCanvas, EditorStatusBar, EmptyPagePrompt, FormatButton, JumpBar, LibrarySidebar, PageRulerView (+18 more)
+Cohesion: 0.13
+Nodes (25): BarDivider, CommentRow, EditorCanvas, EditorStatusBar, EmptyPagePrompt, FormatBar, FormatButton, JumpBar (+17 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.06
-Nodes (63): Equatable, DelimRun, EmphasisKind, bold, boldItalic, italic, ExtensionInlineNode, InlineNode (+55 more)
+Nodes (62): DelimRun, EmphasisKind, bold, boldItalic, italic, ExtensionInlineNode, InlineNode, code (+54 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.16
-Nodes (14): NSFontTraitMask, ProseStyle, ProseStyler, Any, Bool, CGFloat, ColorScheme, NSAttributedString (+6 more)
+Cohesion: 0.08
+Nodes (28): NSFontTraitMask, NSTextCheckingResult, LineHeight, double, normal, relaxed, tight, NSAttributedString.Key (+20 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.23
-Nodes (5): NSTextRange, NSTextStorageDelegate, Coordinator, Never, Notification
+Nodes (6): NSTextRange, NSTextStorageDelegate, Coordinator, Never, Notification, Void
 
 ### Community 7 - "Community 7"
-Cohesion: 0.09
-Nodes (32): Action, Content, Font, Block, Chip, EmptyStateView, Fact, Facts (+24 more)
+Cohesion: 0.14
+Nodes (22): Action, Content, Block, EmptyStateView, Fact, Facts, FilterField, GroupHeader (+14 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.12
-Nodes (15): NSTextCheckingResult, Any, LineHeight, double, normal, relaxed, tight, NSAttributedString.Key (+7 more)
+Cohesion: 0.02
+Nodes (99): Glyph, advances, alignCentre, alignEnd, alignJustify, alignStart, annotate, archive (+91 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.13
-Nodes (24): Fuzzy, SearchDestination, document, entity, event, note, relationship, snapshot (+16 more)
+Cohesion: 0.12
+Nodes (26): Fuzzy, SearchDestination, document, entity, event, note, relationship, snapshot (+18 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.07
-Nodes (39): CryptoKit, FileManager, ISO8601DateFormatter, HistoryReason, ProjectSnapshotRecord, Int, String, DocumentEntry (+31 more)
-
-### Community 11 - "Community 11"
-Cohesion: 0.11
-Nodes (8): LibraryItem, history, manuscript, notes, review, story, timeline, String
+Cohesion: 0.09
+Nodes (31): CryptoKit, FileManager, DocumentEntry, LocalProjectRepository, MarkdownDocument, ProjectLoad, ProjectManifest, ProjectRepositoryError (+23 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.24
-Nodes (7): Coordinator, KeyMonitor, Any, Context, Coordinator, Int, NSView
+Cohesion: 0.09
+Nodes (31): DropDelegate, DropInfo, DropProposal, NSItemProvider, BinderDrag, BinderName, BinderOutline, BinderRowDrop (+23 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.23
-Nodes (8): ExportProfile, ExportService, Data, Double, NSAttributedString, NSFont, NSParagraphStyle, URL
+Cohesion: 0.18
+Nodes (10): Equatable, NSMenuItem, NSTextFinder, EditorCommandRequest, ManuscriptEditor, RevealRequest, Coordinator, UUID (+2 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.12
-Nodes (16): Combine, ObservableObject, AppSettings, Bool, Double, UserDefaults, TypeMenu, TypePanel (+8 more)
+Cohesion: 0.06
+Nodes (31): NSTrackingArea, NSView, NSViewRepresentable, BinderContextMenu, BinderMenu, BinderMenuEntry, destructive, item (+23 more)
 
 ### Community 15 - "Community 15"
-Cohesion: 0.17
-Nodes (7): NSSelectionAffinity, NSValue, NSEdgeInsets, Bool, Int, NSTextView, UnsafeMutablePointer
+Cohesion: 0.08
+Nodes (31): CaseIterable, Sendable, PageViewMode, continuous, page, ExportPreview, ExportRecord, ExportWarning (+23 more)
 
 ### Community 16 - "Community 16"
-Cohesion: 0.21
-Nodes (12): ContinuityChecker, FindingEvidence, FindingTarget, comment, document, entity, event, thread (+4 more)
+Cohesion: 0.12
+Nodes (8): Error, HistoryReason, ProjectSnapshotRecord, Int, String, Task, URL, WorkspaceError
 
 ### Community 17 - "Community 17"
-Cohesion: 0.13
-Nodes (20): AnyShapeStyle, ThreadArc, ThreadState, abandoned, cooling, landed, open, unopened (+12 more)
+Cohesion: 0.22
+Nodes (9): AnyShapeStyle, ArcBlock, BeatRow, OwedRow, Bool, String, ThreadCanvas, ThreadLine (+1 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.18
-Nodes (12): AppearanceRow, EntityList, EntityRow, EventDetail, EventRow, MentionGroup, NoteEditor, NoteList (+4 more)
+Cohesion: 0.12
+Nodes (23): CompositionSettings, GeneralSettings, PagePreview, PageSettings, SettingsView, AppearanceRow, EntityDossier, EntityRow (+15 more)
 
 ### Community 19 - "Community 19"
-Cohesion: 0.26
-Nodes (7): NSTextView, NSViewRepresentable, GrowingText, QuietTextView, Context, NSEvent, NSSize
+Cohesion: 0.28
+Nodes (5): Array, Bool, Int, Set, UUID
 
 ### Community 20 - "Community 20"
-Cohesion: 0.19
-Nodes (10): App, Scene, Entry, RecentProjects, Any, Bool, String, URL (+2 more)
+Cohesion: 0.07
+Nodes (26): App, AppKit, Commands, Foundation, NSApplication, NSApplicationDelegate, NSObject, ObservableObject (+18 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.18
-Nodes (9): NSTextFinder, EditorCommandRequest, EditorSelection, ManuscriptEditor, RevealRequest, Coordinator, UUID, TextBehaviour (+1 more)
+Cohesion: 0.08
+Nodes (6): UUID, StoryProject, ThreadList, threads, UUID, Void
 
 ### Community 22 - "Community 22"
-Cohesion: 0.11
-Nodes (13): ThreadLinks, StoryThread, Bool, Decoder, String, UUID, ThreadKind, mystery (+5 more)
+Cohesion: 0.12
+Nodes (22): ThreadLinks, StoryThread, Bool, Int, String, UUID, ThreadArc, ThreadBeat (+14 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.10
-Nodes (21): CodingKeys, advancesThreadIDs, archivedDocuments, chapter, documents, id, intention, kind (+13 more)
+Cohesion: 0.09
+Nodes (23): CodingKeys, advancesThreadIDs, archivedDocuments, binder, chapter, documents, id, intention (+15 more)
 
 ### Community 24 - "Community 24"
-Cohesion: 0.08
-Nodes (28): EntityKind, character, location, object, organization, symbol, theme, RelationshipKind (+20 more)
+Cohesion: 0.16
+Nodes (23): Codable, Identifiable, EventCertainty, approximate, disputed, stated, unplaced, FindingDisposition (+15 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.22
-Nodes (8): NSScrollView, NSTextContentStorage, NSTextLayoutManager, ManuscriptScrollView, Context, NSAttributedString, String, Void
+Cohesion: 0.12
+Nodes (16): ISO8601DateFormatter, Date, JSONDecoder, JSONEncoder, Timestamp, String, UUID, TrashedItem (+8 more)
 
 ### Community 26 - "Community 26"
-Cohesion: 0.20
-Nodes (8): EventCertainty, approximate, disputed, stated, unplaced, StoryEvent, EventList, UUID
+Cohesion: 0.06
+Nodes (33): Animation, CGSize, NSFontDescriptor, ColorScheme, Chrome, Icon, IconView, Metrics (+25 more)
 
 ### Community 28 - ".send"
-Cohesion: 0.11
-Nodes (17): IndexSet, ManuscriptNavigator, Chapter, DocumentKind, note, scene, DocumentStatus, done (+9 more)
+Cohesion: 0.16
+Nodes (16): Chapter, DocumentKind, note, scene, DocumentStatus, done, draft, outline (+8 more)
 
 ### Community 29 - "PersistenceState"
-Cohesion: 0.33
-Nodes (6): PersistenceState, failed, loading, saved, saving, unsaved
+Cohesion: 0.14
+Nodes (13): ExternalChange, LibraryItem, history, manuscript, story, timeline, trash, PersistenceState (+5 more)
 
 ### Community 30 - "StartScreen"
 Cohesion: 0.22
 Nodes (8): RecentRow, StartAction, StartScreen, String, Int, NSSize, String, Void
 
 ### Community 31 - "View"
-Cohesion: 0.16
-Nodes (10): Mention, StoryBrain, StoryIndex, Bool, Int, NSString, Range, String (+2 more)
+Cohesion: 0.06
+Nodes (41): Comparable, Int, ContinuityChecker, FindingEvidence, FindingKind, aliasCollision, chronologyInversion, emptyScene (+33 more)
 
 ### Community 32 - "EntityKind"
-Cohesion: 0.28
-Nodes (4): NSTextViewDelegate, Coordinator, Coordinator, Notification
+Cohesion: 0.16
+Nodes (8): Image, HighlightedText, Font, Range, LibrarySidebar, String, TrashContents, Text
 
 ### Community 33 - "Community 33"
 Cohesion: 0.16
@@ -231,103 +232,95 @@ Nodes (13): EditorCommand, alignment, blockquote, face, format, heading, highlig
 
 ### Community 34 - "Community 34"
 Cohesion: 0.15
-Nodes (7): NSCoder, NSMenu, NSRect, NSTextContainer, ManuscriptTextView, Any, NSEvent
+Nodes (7): NSTextContainer, ManuscriptTextView, Any, NSCoder, NSEvent, NSMenu, NSRect
 
 ### Community 35 - "Community 35"
-Cohesion: 0.13
-Nodes (21): Identifiable, NSTextAlignment, FormatBar, Set, HighlightColour, amber, mint, rose (+13 more)
+Cohesion: 0.05
+Nodes (46): LocalizedError, NSTextAlignment, Any, ExportError, renderFailed, usePDFWriter, ExportFormat, docx (+38 more)
 
 ### Community 36 - "Overlays.swift"
-Cohesion: 0.20
-Nodes (12): CommandPalette, PaletteAction, PaletteEntry, PaletteRow, SearchHelp, SearchPanel, SearchRow, Bool (+4 more)
+Cohesion: 0.05
+Nodes (39): Actions, EnvironmentKey, NavigationSplitViewVisibility, NSWindow, CommandPalette, Coordinator, KeyMonitor, PaletteAction (+31 more)
 
 ### Community 37 - "FindingSeverity"
-Cohesion: 0.33
-Nodes (5): AppAppearance, dark, light, system, ColorScheme
-
-### Community 38 - "FindingKind"
 Cohesion: 0.10
-Nodes (20): Comparable, Int, FindingKind, aliasCollision, chronologyInversion, emptyScene, eventWithoutScene, orphanedComment (+12 more)
+Nodes (17): Combine, AppAppearance, dark, light, system, AppSettings, Bool, ColorScheme (+9 more)
 
-### Community 39 - "Hashable"
-Cohesion: 0.20
-Nodes (12): Codable, Hashable, FindingDisposition, dismissed, intentional, Int, ThreadBeat, ThreadRole (+4 more)
+### Community 39 - "ThreadKind"
+Cohesion: 0.17
+Nodes (11): Decoder, ThreadKind, characterArc, conflict, foreshadowing, goal, mystery, promise (+3 more)
 
 ### Community 40 - "WorkspaceView.swift"
-Cohesion: 0.17
-Nodes (10): Actions, EnvironmentKey, Banner, EnvironmentValues, Notification.Name, ProseStyleKey, StoryLoomCommand, export (+2 more)
+Cohesion: 0.13
+Nodes (14): Chip, WarningRow, EntityKind, character, location, object, organization, symbol (+6 more)
 
-### Community 41 - "WindowConfigurator"
-Cohesion: 0.30
-Nodes (6): NSWindow, Coordinator, Bool, Context, NSView, WindowConfigurator
+### Community 41 - "AppCommands"
+Cohesion: 0.24
+Nodes (12): Hashable, BinderItem, GroupKind, chapter, folder, part, volume, Kind (+4 more)
 
 ### Community 42 - "Date"
-Cohesion: 0.40
-Nodes (3): NSTextStorageEditActions, NSTextStorage, Set
+Cohesion: 0.23
+Nodes (7): NSScrollView, NSTextContentStorage, NSTextLayoutManager, ManuscriptScrollView, Context, NSAttributedString, String
 
 ### Community 43 - "Community 43"
 Cohesion: 0.17
-Nodes (11): Foundation, CommentRow, Bool, StoryComment, Bool, Double, Int, NSString (+3 more)
+Nodes (7): NSSelectionAffinity, NSValue, NSEdgeInsets, Bool, Int, NSTextView, UnsafeMutablePointer
 
 ### Community 44 - "CodingKeys"
-Cohesion: 0.29
-Nodes (7): CodingKey, CodingKeys, answer, id, isAbandoned, kind, question
-
-### Community 45 - "WorkspaceView"
-Cohesion: 0.18
-Nodes (9): NavigationSplitViewVisibility, Binding, Notification, WorkspaceSheet, export, palette, search, WorkspaceView (+1 more)
+Cohesion: 0.33
+Nodes (6): CodingKeys, answer, id, isAbandoned, kind, question
 
 ### Community 46 - "Community 46"
 Cohesion: 0.09
-Nodes (22): CodingKeys, aliases, certainty, chronologyLabel, comments, dispositions, entities, events (+14 more)
+Nodes (23): CodingKeys, aliases, certainty, chronologyLabel, comments, dispositions, entities, events (+15 more)
 
-### Community 47 - ".updateNSView"
-Cohesion: 0.40
-Nodes (4): FocusDepth, off, paragraph, sentence
+### Community 47 - "WorkspaceView.swift"
+Cohesion: 0.29
+Nodes (7): CodingKey, CodingKeys, children, group, id, kind, name
 
-### Community 48 - "WorkspaceSheet"
-Cohesion: 0.67
-Nodes (3): PageViewMode, continuous, page
+### Community 48 - "ProseStyler.swift"
+Cohesion: 0.33
+Nodes (4): NSTextStorageEditActions, EditorSelection, NSTextStorage, Set
 
-### Community 55 - "Community 55"
-Cohesion: 0.05
-Nodes (43): Animation, CGRect, CGSize, Edge, Layout, NSFontDescriptor, ProposedViewSize, FlowLayout (+35 more)
+### Community 49 - ".edit"
+Cohesion: 0.50
+Nodes (3): FieldRow, InspectorPane, Value
+
+### Community 51 - "FlowLayout"
+Cohesion: 0.36
+Nodes (6): CGPoint, CGRect, Layout, ProposedViewSize, FlowLayout, Subviews
 
 ### Community 57 - "Community 57"
-Cohesion: 0.16
-Nodes (9): Commands, NSApplication, NSApplicationDelegate, NSObject, AppCommands, AppDelegate, Bool, Notification (+1 more)
+Cohesion: 0.15
+Nodes (11): NSTextView, NSTextViewDelegate, Coordinator, GrowingText, QuietTextView, Context, Coordinator, Int (+3 more)
 
 ### Community 76 - "Community 76"
 Cohesion: 0.13
 Nodes (20): ArraySlice, BlockParser, BufferDiff, MarkdownBlock, MarkdownBlockKind, blank, blockLatex, blockquote (+12 more)
-
-### Community 118 - "Community 118"
-Cohesion: 0.12
-Nodes (23): CaseIterable, LocalizedError, Sendable, ExportError, renderFailed, usePDFWriter, ExportFormat, docx (+15 more)
 
 ### Community 126 - "Community 126"
 Cohesion: 0.40
 Nodes (4): Modifications, SwiftMarkdownEngine, Third-party code, What was taken, and what was not
 
 ## Knowledge Gaps
-- **243 isolated node(s):** `continuous`, `page`, `light`, `dark`, `system` (+238 more)
+- **379 isolated node(s):** `continuous`, `page`, `light`, `dark`, `system` (+374 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **7 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `NSRange` connect `Community 4` to `Community 1`, `Community 2`, `Community 3`, `Community 5`, `Community 6`, `Community 8`, `Community 9`, `Community 13`, `Community 15`, `Community 16`, `Community 18`, `Community 21`, `Community 25`, `View`, `Community 34`, `Community 35`, `Date`, `Community 43`, `.updateNSView`, `Community 76`?**
-  _High betweenness centrality (0.257) - this node is a cross-community bridge._
-- **Why does `WorkspaceModel` connect `Community 0` to `Community 3`, `Community 7`, `Community 10`, `Community 11`, `Community 14`, `Community 16`, `Community 17`, `Community 18`, `Community 20`, `Community 21`, `Community 22`, `Community 24`, `Community 26`, `.send`, `PersistenceState`, `StartScreen`, `View`, `Community 35`, `Overlays.swift`, `Community 43`, `WorkspaceView`, `Community 57`, `Community 118`?**
-  _High betweenness centrality (0.212) - this node is a cross-community bridge._
-- **Why does `StoryProject` connect `Community 16` to `Community 0`, `Community 4`, `Hashable`, `Community 9`, `Community 10`, `Community 11`, `Community 13`, `Community 118`, `Community 22`, `Community 24`, `Community 26`, `.send`, `View`?**
-  _High betweenness centrality (0.060) - this node is a cross-community bridge._
+- **Why does `WorkspaceModel` connect `Community 0` to `Community 3`, `Community 10`, `Community 11`, `Community 12`, `Community 13`, `Community 16`, `Community 17`, `Community 18`, `Community 20`, `Community 21`, `Community 22`, `Community 24`, `Community 25`, `.send`, `PersistenceState`, `StartScreen`, `View`, `EntityKind`, `Community 35`, `Overlays.swift`, `FindingSeverity`, `WorkspaceView.swift`, `AppCommands`, `WorkspaceView`, `ProseStyler.swift`, `.edit`?**
+  _High betweenness centrality (0.214) - this node is a cross-community bridge._
+- **Why does `NSRange` connect `Community 4` to `Community 1`, `Community 2`, `Community 35`, `Community 34`, `Community 5`, `Community 6`, `Community 9`, `Date`, `Community 43`, `Community 76`, `Community 13`, `ProseStyler.swift`, `Community 18`, `Community 20`, `Community 21`, `View`?**
+  _High betweenness centrality (0.162) - this node is a cross-community bridge._
+- **Why does `Glyph` connect `Community 8` to `Community 2`, `Community 3`, `Community 7`, `Community 15`, `Community 17`, `Community 18`, `Community 22`, `Community 24`, `Community 26`, `.send`, `PersistenceState`, `StartScreen`, `EntityKind`, `Community 35`, `Overlays.swift`, `FindingSeverity`, `ThreadKind`, `WorkspaceView.swift`, `AppCommands`?**
+  _High betweenness centrality (0.158) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `WorkspaceModel` (e.g. with `.appearances()` and `EditorSelection`) actually correct?**
   _`WorkspaceModel` has 3 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 4 inferred relationships involving `NSRange` (e.g. with `.inlineAttributed()` and `.prose()`) actually correct?**
   _`NSRange` has 4 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 19 inferred relationships involving `StoryProject` (e.g. with `.archive()` and `.canMove()`) actually correct?**
-  _`StoryProject` has 19 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 27 inferred relationships involving `StoryProject` (e.g. with `.adopt()` and `.archive()`) actually correct?**
+  _`StoryProject` has 27 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `continuous`, `page`, `light` to the rest of the system?**
-  _243 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _379 weakly-connected nodes found - possible documentation gaps or missing edges._

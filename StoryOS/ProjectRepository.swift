@@ -16,6 +16,19 @@
 import CryptoKit
 import Foundation
 
+/// A project, and what had to be taken in from the folder to assemble it.
+///
+/// `adopted` is the project-relative paths of Markdown that was in the folder
+/// without being in the manifest. Two things are owed to it. The author is owed
+/// the news — being told which files were picked up is the difference between a
+/// feature and a surprise — and the next save is owed the list, because until
+/// StoryLoom has written those scenes out under its own names the originals are
+/// still lying there, and a second load would take them in all over again.
+nonisolated struct ProjectLoad: Sendable {
+    var project: StoryProject
+    var adopted: [String] = []
+}
+
 actor LocalProjectRepository {
     private let fileManager: FileManager
 
@@ -28,29 +41,35 @@ actor LocalProjectRepository {
 
     // MARK: - Lifecycle
 
-    func createProject(title: String, at projectURL: URL) throws -> StoryProject {
+    func createProject(title: String, at projectURL: URL) throws -> ProjectLoad {
         try fileManager.createDirectory(at: projectURL, withIntermediateDirectories: true)
 
+        // Chapter One, one scene in it, and nothing else.
+        //
+        // No Volume and no Part. A novel that needs them will say so later, and
+        // a new project that opens with three empty tiers has spent the
+        // author's first minute asking them to organise a book they have not
+        // written a word of.
+        let opening = StoryDocument(
+            title: "Untitled Scene",
+            chapter: "Chapter One",
+            kind: .scene,
+            text: "",
+            status: .draft
+        )
         let project = StoryProject(
             title: title,
-            documents: [
-                StoryDocument(
-                    title: "Untitled Scene",
-                    chapter: "Chapter One",
-                    kind: .scene,
-                    text: "",
-                    status: .draft
-                )
-            ]
+            documents: [opening],
+            binder: [.folder("Chapter One", [.document(opening.id)], group: .chapter)]
         )
         try save(project, to: projectURL)
         _ = try createSnapshot(project, to: projectURL, reason: HistoryReason.projectCreated)
-        return project
+        return ProjectLoad(project: project)
     }
 
     /// Writes an existing in-memory project into a brand new folder. Used by the
     /// start screen so the example project can be adopted as real work.
-    func createProject(from project: StoryProject, title: String, at projectURL: URL) throws -> StoryProject {
+    func createProject(from project: StoryProject, title: String, at projectURL: URL) throws -> ProjectLoad {
         try fileManager.createDirectory(at: projectURL, withIntermediateDirectories: true)
 
         var copy = project
@@ -58,10 +77,10 @@ actor LocalProjectRepository {
         copy.title = title
         try save(copy, to: projectURL)
         _ = try createSnapshot(copy, to: projectURL, reason: HistoryReason.projectCreated)
-        return copy
+        return ProjectLoad(project: copy)
     }
 
-    func loadProject(at projectURL: URL) throws -> StoryProject {
+    func loadProject(at projectURL: URL) throws -> ProjectLoad {
         let manifestURL = resolveManifest(in: projectURL)
         guard fileManager.fileExists(atPath: manifestURL.path) else {
             throw ProjectRepositoryError.missingManifest(manifestURL)
@@ -72,21 +91,113 @@ actor LocalProjectRepository {
             throw ProjectRepositoryError.unsupportedFormatVersion(manifest.formatVersion)
         }
 
-        let documents = try load(entries: manifest.documents, in: projectURL)
+        var documents = try load(entries: manifest.documents, in: projectURL)
         let archived = try load(entries: manifest.archivedDocuments, in: projectURL)
+
+        // Markdown in the folder that the manifest has never heard of.
+        //
+        // The project is a folder of Markdown files and StoryLoom has always
+        // promised that this is a real format, not an export — so a scene that
+        // arrives by any other route than this application (dropped in from
+        // Finder, written in another editor, restored from a backup, pulled by
+        // a sync client, merged by git) is a scene, and the author will be
+        // looking for it. Until now the manifest was the only index, so those
+        // files were invisible and the next save deleted them.
+        let claimed = Set(manifest.documents.map(\.path) + manifest.archivedDocuments.map(\.path))
+        let strays = adoptStrays(in: "manuscript", of: projectURL, claimed: claimed, taken: Set(
+            (documents + archived).map(\.id)
+        ))
+        documents.append(contentsOf: strays.documents)
+
+        // The same in `archive/`, where a file is just as capable of appearing
+        // and just as invisible when it does. It stays archived: something put
+        // it in the folder for archived scenes, and second-guessing that would
+        // drop it into the middle of the manuscript.
+        var archivedDocuments = archived
+        let archivedStrays = adoptStrays(in: "archive", of: projectURL, claimed: claimed, taken: Set(
+            (documents + archived).map(\.id)
+        ))
+        archivedDocuments.append(contentsOf: archivedStrays.documents)
 
         let storyURL = projectURL.appending(path: "story/metadata.json")
         let story: StoryMetadata = fileManager.fileExists(atPath: storyURL.path)
             ? try decodeStoryMetadata(from: storyURL)
             : StoryMetadata()
 
-        return StoryProject(
+        // The outline lives beside the metadata rather than in the manifest.
+        // The manifest is hand-written YAML meant to stay readable and diffable
+        // by a human with a text editor; a nested tree is neither, and folding
+        // one into it would make the format worse for the sake of one file.
+        // A missing or unreadable binder is not an error — the manuscript is
+        // still all there, and `StoryProject` rebuilds a tree from it.
+        let binderURL = projectURL.appending(path: "story/binder.json")
+        let binder: [BinderItem] = fileManager.fileExists(atPath: binderURL.path)
+            ? ((try? JSONDecoder().decode([BinderItem].self, from: try Data(contentsOf: binderURL))) ?? [])
+            : []
+
+        var project = StoryProject(
             id: manifest.id,
             title: manifest.title,
             documents: documents,
             story: story,
-            archivedDocuments: archived
+            archivedDocuments: archivedDocuments,
+            binder: binder
         )
+        // An adopted file is in `documents` and in no folder of the outline,
+        // which is exactly the case `reconcile` exists for: it lands at the end,
+        // where the author can see it and move it.
+        if !strays.documents.isEmpty { project.applyBinderOrder() }
+
+        return ProjectLoad(project: project, adopted: strays.paths + archivedStrays.paths)
+    }
+
+    /// Every `.md` file in a directory that the manifest does not account for,
+    /// read as a document.
+    ///
+    /// Two kinds turn up. One carries StoryLoom's own front matter — a file
+    /// copied out of another project, or one this project lost track of — and
+    /// keeps everything it says about itself. The other is a plain Markdown file
+    /// somebody wrote in a text editor, which has no front matter at all and is
+    /// still, unmistakably, prose; it gets an identity and a title and nothing
+    /// is taken away from what it says.
+    ///
+    /// The body is never edited on the way in. A leading `# Heading` becomes the
+    /// title *and* stays in the text: it is the author's line, and a reader who
+    /// opens the file in the editor they wrote it in should find it unchanged.
+    private func adoptStrays(
+        in directory: String,
+        of projectURL: URL,
+        claimed: Set<String>,
+        taken: Set<UUID>
+    ) -> (documents: [StoryDocument], paths: [String]) {
+        let directoryURL = projectURL.appending(path: directory)
+        let contents = (try? fileManager.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: nil
+        )) ?? []
+
+        var ids = taken
+        var documents: [StoryDocument] = []
+        var paths: [String] = []
+
+        for url in contents.filter({ $0.pathExtension.lowercased() == "md" }).sorted(by: { $0.path < $1.path }) {
+            let relative = "\(directory)/\(url.lastPathComponent)"
+            guard !claimed.contains(relative) else { continue }
+            guard let text = try? readString(url) else { continue }
+
+            var document = MarkdownDocument.adopt(from: text, url: url)
+            // A file duplicated in Finder carries the id of the scene it was
+            // copied from. Two documents with one id is the one thing the rest
+            // of the application cannot survive, and the copy is plainly meant
+            // to be a second scene — so it becomes one.
+            if ids.contains(document.id) { document.id = UUID() }
+
+            ids.insert(document.id)
+            documents.append(document)
+            paths.append(relative)
+        }
+
+        return (documents, paths)
     }
 
     /// Finds the manifest inside a project folder. Supports both the current
@@ -110,13 +221,28 @@ actor LocalProjectRepository {
 
     // MARK: - Saving
 
-    func save(_ project: StoryProject, to projectURL: URL) throws {
+    /// Writes the project out.
+    ///
+    /// `claiming` is the files this session adopted — Markdown that was in the
+    /// folder without being in the manifest. Once their scenes have been written
+    /// under StoryLoom's own names, the originals are the same prose twice, and
+    /// leaving them would mean the next load adopted them again, and the one
+    /// after that, until a folder of five scenes opened as fifty. So a save is
+    /// where an adopted file stops being a stray and becomes a scene.
+    func save(_ project: StoryProject, to projectURL: URL, claiming adopted: Set<String> = []) throws {
         let revision = UUID()
         try journal(projectURL, event: "begin", revision: revision, detail: "\(project.documents.count) documents")
 
+        // What the last save put on disk, plus what this session took in. Only
+        // those files may be cleaned up — see `write(_:into:of:ours:)`.
+        let manifestURL = resolveManifest(in: projectURL)
+        let previous = (try? readString(manifestURL)).flatMap { try? ProjectManifest.decode(from: $0) }
+        let ours = Set((previous?.documents ?? []).map(\.path) + (previous?.archivedDocuments ?? []).map(\.path))
+            .union(adopted)
+
         do {
-            let entries = try write(project.documents, into: "manuscript", of: projectURL)
-            let archived = try write(project.archivedDocuments, into: "archive", of: projectURL)
+            let entries = try write(project.documents, into: "manuscript", of: projectURL, ours: ours)
+            let archived = try write(project.archivedDocuments, into: "archive", of: projectURL, ours: ours)
 
             let manifest = ProjectManifest(
                 id: project.id,
@@ -130,6 +256,10 @@ actor LocalProjectRepository {
             try fileManager.createDirectory(at: storyURL, withIntermediateDirectories: true)
             try atomicWrite(try encodeStoryMetadata(project.story), to: storyURL.appending(path: "metadata.json"))
 
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            try atomicWrite(try encoder.encode(project.binder), to: storyURL.appending(path: "binder.json"))
+
             try journal(projectURL, event: "commit", revision: revision, detail: fingerprint(at: projectURL))
         } catch {
             try? journal(projectURL, event: "failed", revision: revision, detail: error.localizedDescription)
@@ -140,7 +270,8 @@ actor LocalProjectRepository {
     private func write(
         _ documents: [StoryDocument],
         into directory: String,
-        of projectURL: URL
+        of projectURL: URL,
+        ours: Set<String>
     ) throws -> [ProjectManifest.DocumentEntry] {
         let directoryURL = projectURL.appending(path: directory)
         try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
@@ -159,8 +290,16 @@ actor LocalProjectRepository {
         // Reordering or renaming a scene changes its filename. Without this, the
         // package slowly fills with orphans that no manifest points at, and the
         // "open it in a text editor" promise degrades into a junk drawer.
+        //
+        // Only ever *our* orphans. This used to delete every `.md` it had not
+        // just written, which meant a file an author dropped into the folder
+        // between two autosaves was destroyed by the next keystroke — the one
+        // outcome a plain-text format must never have. A file is ours only if
+        // the manifest we are replacing pointed at it; anything else belongs to
+        // whoever put it there and is picked up as a new scene on the next load.
         let existing = try fileManager.contentsOfDirectory(at: directoryURL, includingPropertiesForKeys: nil)
         for url in existing where url.pathExtension == "md" && !written.contains(url.lastPathComponent) {
+            guard ours.contains("\(directory)/\(url.lastPathComponent)") else { continue }
             try? fileManager.removeItem(at: url)
         }
 
@@ -545,7 +684,55 @@ private enum MarkdownDocument {
         return lines.joined(separator: "\n") + "\n" + document.text
     }
 
-    nonisolated static func decode(from string: String, expectedID: UUID, url: URL?) throws -> StoryDocument {
+    /// Reads a Markdown file that arrived from outside StoryLoom.
+    ///
+    /// Nothing here can fail, because there is no failure worth reporting: the
+    /// file is prose either way, and refusing to open it would leave the author
+    /// looking at a folder containing a scene the application says is not there.
+    /// Front matter is used when it is ours and ignored when it is not.
+    nonisolated static func adopt(from string: String, url: URL) -> StoryDocument {
+        if let decoded = try? decode(from: string, expectedID: nil, url: url) { return decoded }
+
+        return StoryDocument(
+            title: adoptedTitle(from: string, url: url),
+            // No chapter: the file said nothing about where it belongs, and
+            // guessing would put it in a chapter the author never wrote.
+            chapter: "",
+            kind: .scene,
+            text: string,
+            status: .draft
+        )
+    }
+
+    /// The first `# Heading`, or the filename made readable.
+    ///
+    /// A file called `0004-the-long-way-down.md` was almost certainly written by
+    /// an earlier StoryLoom, so the ordering prefix comes off; one called
+    /// `chapter-three.md` was written by a person, and its hyphens are the only
+    /// spaces they had available.
+    nonisolated static func adoptedTitle(from string: String, url: URL) -> String {
+        let heading = string
+            .components(separatedBy: "\n")
+            .prefix(20)
+            .first { $0.hasPrefix("# ") }
+            .map { String($0.dropFirst(2)).trimmingCharacters(in: .whitespaces) }
+        if let heading, !heading.isEmpty { return heading }
+
+        var stem = url.deletingPathExtension().lastPathComponent
+        stem.replace(/^\d+[-_ ]+/, with: "")
+        let spaced = stem
+            .replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+            .trimmingCharacters(in: .whitespaces)
+        guard let first = spaced.first else { return "Untitled Scene" }
+        return first.uppercased() + spaced.dropFirst()
+    }
+
+    /// `expectedID` is the identity the manifest promised. Nil accepts whatever
+    /// the file says it is, which is what adoption needs and what a file already
+    /// listed in the manifest must never be allowed: a scene that quietly
+    /// changes id underneath a binder takes its place in the outline with it.
+    nonisolated static func decode(from string: String, expectedID: UUID?, url: URL?) throws -> StoryDocument {
         // Line-based, so that an empty front matter block parses and a `---`
         // scene break in the prose is never mistaken for the terminator.
         let lines = string.components(separatedBy: "\n")
@@ -582,7 +769,7 @@ private enum MarkdownDocument {
         guard let rawID = values["id"], let id = UUID(uuidString: rawID) else {
             throw ProjectRepositoryError.malformedDocument(url)
         }
-        guard id == expectedID else {
+        if let expectedID, id != expectedID {
             throw ProjectRepositoryError.identityMismatch(url)
         }
 

@@ -236,6 +236,9 @@ struct SectionLabel: View {
 struct StatusDot: View {
     let color: Color
     var filled = true
+    /// A hair larger where the dot is being *read* rather than scanned — a
+    /// legend has to say which colour this is, not merely that there is one.
+    var size: CGFloat = 6
 
     var body: some View {
         Group {
@@ -245,7 +248,7 @@ struct StatusDot: View {
                 Circle().strokeBorder(color, lineWidth: 1.2)
             }
         }
-        .frame(width: 6, height: 6)
+        .frame(width: size, height: size)
         .accessibilityHidden(true)
     }
 }

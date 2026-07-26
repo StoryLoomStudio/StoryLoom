@@ -20,18 +20,23 @@ struct LibrarySidebar: View {
     var body: some View {
         List(selection: $workspace.library) {
             ForEach(LibraryItem.rooms) { row($0) }
-
-            // Trash sits under a spacer rather than in the same run of rooms.
-            // Pushed to the bottom it reads as the floor of the sidebar, which is
-            // where every author already expects to find it.
-            Section {
-                ForEach(LibraryItem.utilities) { row($0) }
-            }
         }
         .listStyle(.sidebar)
         .denseList()
         .safeAreaInset(edge: .top, spacing: 0) { ProjectHeader() }
-        .safeAreaInset(edge: .bottom, spacing: 0) { SaveIndicator() }
+        .safeAreaInset(edge: .bottom, spacing: 0) { floor }
+    }
+
+    /// Trash is pinned to the actual bottom of the sidebar, not merely placed
+    /// last in the list. As a trailing `Section` it floated directly under Notes
+    /// and rose with the rooms; on the floor it sits where the Finder, Mail and
+    /// every other Mac application put it, and therefore where the author's eye
+    /// already goes.
+    private var floor: some View {
+        VStack(spacing: 0) {
+            Divider()
+            SidebarTrashButton()
+        }
     }
 
     private func row(_ item: LibraryItem) -> some View {
@@ -60,6 +65,88 @@ struct LibrarySidebar: View {
         case .trash: workspace.project.story.trash.count
         case .history: 0
         }
+    }
+}
+
+/// The only room that lives on the sidebar floor gets a full-width target rather
+/// than inheriting a list row's small label hit area. It remains visually quiet
+/// until the pointer reaches it, then gives the same broad, easy-to-aim feedback
+/// as the rest of the sidebar.
+private struct SidebarTrashButton: View {
+    @EnvironmentObject private var workspace: WorkspaceModel
+    @State private var isHovering = false
+    @State private var isTrashTargeted = false
+
+    private var isSelected: Bool { workspace.library == .trash }
+    private var count: Int { workspace.project.story.trash.count }
+
+    var body: some View {
+        Button { workspace.library = .trash } label: {
+            HStack(spacing: Space.medium) {
+                IconView(LibraryItem.trash.icon, size: Icon.room)
+                    .frame(width: Icon.room)
+                    .foregroundStyle(isTrashTargeted ? .red : .primary)
+
+                Text(isTrashTargeted ? "Move to Trash" : LibraryItem.trash.title)
+                    .lineLimit(1)
+
+                Spacer(minLength: Space.small)
+
+                if count > 0 {
+                    Text(count.formatted())
+                        .font(Chrome.small)
+                        .foregroundStyle(isSelected ? .primary : .secondary)
+                        .monospacedDigit()
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+            .padding(.horizontal, Space.medium)
+            .contentShape(RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+            .background {
+                RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+                    .fill(background)
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, Space.small)
+        .padding(.vertical, Space.tight)
+        .onHover { isHovering = $0 }
+        .onDrop(
+            of: [.storyLoomBinderItem],
+            delegate: BinderTrashDrop(isTargeted: $isTrashTargeted, workspace: workspace)
+        )
+        .help(LibraryItem.trash.question)
+        .accessibilityLabel(isTrashTargeted ? "Move item to Trash" : "Trash\(count > 0 ? ", \(count) items" : "")")
+    }
+
+    private var background: Color {
+        if isTrashTargeted { return .red.opacity(0.14) }
+        if isSelected { return Color.accentColor.opacity(0.18) }
+        return isHovering ? Color.primary.opacity(0.08) : .clear
+    }
+}
+
+/// Reuses the binder's in-process drag payload. Dropping a group preserves its
+/// descendants as one trash item, while dropping a scene preserves just that
+/// scene — both are reversible from the Trash room.
+private struct BinderTrashDrop: DropDelegate {
+    @Binding var isTargeted: Bool
+    let workspace: WorkspaceModel
+
+    func validateDrop(info: DropInfo) -> Bool { workspace.draggingBinderID != nil }
+
+    func dropEntered(info: DropInfo) { isTargeted = true }
+    func dropExited(info: DropInfo) { isTargeted = false }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: workspace.draggingBinderID == nil ? .forbidden : .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        guard let id = workspace.draggingBinderID else { return false }
+        isTargeted = false
+        workspace.draggingBinderID = nil
+        return workspace.trashBinderItem(id)
     }
 }
 
@@ -97,31 +184,6 @@ private struct ProjectHeader: View {
     }
 }
 
-private struct SaveIndicator: View {
-    @EnvironmentObject private var workspace: WorkspaceModel
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Divider()
-            HStack(spacing: Space.snug) {
-                GlyphIcon(glyph: workspace.persistence.glyph, size: Icon.status)
-                    .foregroundStyle(workspace.persistence.tint)
-
-                Text(workspace.persistence.title)
-                    .font(Chrome.small)
-                    .foregroundStyle(.secondary)
-
-                Spacer(minLength: Space.tight)
-            }
-            .padding(.horizontal, Space.medium)
-            .frame(height: 26)
-        }
-        .background(.bar)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(workspace.persistence.title)
-    }
-}
-
 // MARK: - Navigator
 
 struct ManuscriptNavigator: View {
@@ -153,13 +215,23 @@ struct ManuscriptNavigator: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            NavigatorBar(filter: $filter, prompt: "Filter scenes") {
+            NavigatorBar(filter: $filter, prompt: "Filter manuscript") {
+                // Scene first and alone, because it is what the author is
+                // here to make. The three structural groups are one step down;
+                // Folder is last, on its own, because it is the one that means
+                // nothing about the book.
                 Menu {
                     Button("New Scene") { workspace.createScene() }
-                    Button("New Chapter") { workspace.createChapter() }
-                    Button("New Volume") { workspace.createVolume() }
+                    Divider()
+                    Button("New Chapter") { workspace.createGroup(.chapter) }
+                    Button("New Part") { workspace.createGroup(.part) }
+                    Button("New Volume") { workspace.createGroup(.volume) }
+                    Divider()
+                    Button("New Folder") { workspace.createGroup(.folder) }
                 } label: {
-                    GlyphIcon(glyph: .plus, size: Icon.formatter)
+                    // Baked, not laid out: a menu's label is drawn by AppKit,
+                    // which honours an `NSImage`'s size and ignores a frame.
+                    Glyph.plus.menuImage(size: Icon.navigatorAction)
                 }
                 .help("Add to the manuscript (⇧⌘N for a scene)")
             }
@@ -175,161 +247,53 @@ struct ManuscriptNavigator: View {
                     action: filter.isEmpty ? { workspace.createScene() } : nil
                 )
             } else {
-                List(selection: $workspace.selectedDocumentID) {
-                    if filtered.usesVolumes {
-                        ForEach(filtered.volumes) { volume in
-                            VolumeSection(volume: volume, canReorder: canReorder)
-                        }
-                    } else {
-                        // No volumes in this book: two tiers, and no row called
-                        // "Unassigned" wrapped around the whole manuscript.
-                        ForEach(filtered.chapters) { chapter in
-                            ChapterSection(chapter: chapter, canReorder: canReorder)
-                        }
-                    }
+                BinderOutline(items: outline)
+            }
+        }
+    }
 
-                    if !workspace.project.archivedDocuments.isEmpty {
-                        Section {
-                            ForEach(workspace.project.archivedDocuments) { document in
-                                HStack(spacing: Space.snug) {
-                                    GlyphIcon(glyph: .archive, size: Icon.navigatorRow)
-                                        .foregroundStyle(.tertiary)
-                                    Text(document.displayTitle)
-                                        .font(Chrome.body)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                    Spacer(minLength: Space.tight)
-                                    Button("Restore") { workspace.restore(document) }
-                                        .buttonStyle(.link)
-                                        .font(Chrome.small)
-                                }
-                            }
-                        } header: {
-                            GroupHeader(title: "Archived", count: workspace.project.archivedDocuments.count)
-                        }
-                    }
+    /// The tree, filtered.
+    ///
+    /// Filtering prunes rather than flattens: a scene that matches keeps the
+    /// folders above it, so a hit still tells you *where in the book* it is,
+    /// which is most of what the author was asking. Folders that end up empty
+    /// drop out — a filter should not leave a column of headings with nothing
+    /// underneath them.
+    private var outline: [BinderItem] {
+        guard !filter.isEmpty else { return workspace.project.binder }
+        let matching = Set(
+            workspace.project.documents
+                .filter {
+                    $0.title.localizedCaseInsensitiveContains(filter)
+                        || $0.text.localizedCaseInsensitiveContains(filter)
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .background(Color(nsColor: .controlBackgroundColor))
-                .denseList()
-            }
-        }
-    }
-}
-
-// MARK: - Outline
-
-/// The menu on a scene. Shared by both tiers, so a scene offers the same actions
-/// wherever it is sitting.
-@ViewBuilder
-private func sceneMenu(_ document: StoryDocument, _ workspace: WorkspaceModel) -> some View {
-    Button("Duplicate") { workspace.duplicate(document) }
-    Divider()
-    Button("Move Up") { workspace.move(document, by: -1) }
-        .disabled(!workspace.canMove(document, by: -1))
-    Button("Move Down") { workspace.move(document, by: 1) }
-        .disabled(!workspace.canMove(document, by: 1))
-    Divider()
-    Menu("Status") {
-        ForEach(DocumentStatus.allCases, id: \.self) { status in
-            Button(status.title) {
-                workspace.selectedDocumentID = document.id
-                workspace.updateStatus(status)
-            }
-        }
-    }
-    Divider()
-    Button("Archive") { workspace.archive(document) }
-    // Destructive and last, with the system's own red. It goes to the trash, so
-    // the word "Delete" is not a lie about being irreversible.
-    Button("Delete", role: .destructive) { workspace.deleteDocument(document) }
-}
-
-/// A volume and the chapters under it.
-private struct VolumeSection: View {
-    let volume: StoryProject.Volume
-    let canReorder: Bool
-
-    @EnvironmentObject private var workspace: WorkspaceModel
-    @State private var isExpanded = true
-
-    var body: some View {
-        Section(isExpanded: $isExpanded) {
-            ForEach(volume.chapters) { chapter in
-                ChapterSection(chapter: chapter, canReorder: canReorder, indented: true)
-            }
-        } header: {
-            GroupHeader(title: volume.title, detail: volume.wordCount.formatted())
-                .contextMenu {
-                    Button("Add Chapter Here") { workspace.createChapter(in: volume.title) }
+                .map(\.id)
+        )
+        // A group whose own name matches keeps everything under it: searching
+        // for "Part Two" means "show me Part Two", not "show me the nothing
+        // inside it that happens to contain the words Part Two".
+        func prune(_ items: [BinderItem]) -> [BinderItem] {
+            items.compactMap { item in
+                switch item.kind {
+                case .document:
+                    return matching.contains(item.id) ? item : nil
+                case .folder:
+                    if item.name.localizedCaseInsensitiveContains(filter) { return item }
+                    let kept = prune(item.children)
+                    if kept.isEmpty { return nil }
+                    var copy = item
+                    copy.children = kept
+                    return copy
                 }
-        }
-    }
-}
-
-/// A chapter and its scenes. The scenes are what actually reorder.
-private struct ChapterSection: View {
-    let chapter: StoryProject.Chapter
-    let canReorder: Bool
-    var indented = false
-
-    @EnvironmentObject private var workspace: WorkspaceModel
-    @State private var isExpanded = true
-
-    /// `nil` disables the drag handles outright rather than accepting a drag and
-    /// silently doing nothing. The type has to be spelled out — a ternary between
-    /// a method reference and `nil` gives the compiler nothing to infer from.
-    private var reorderHandler: ((IndexSet, Int) -> Void)? {
-        guard canReorder else { return nil }
-        return { offsets, destination in move(offsets, to: destination) }
-    }
-
-    var body: some View {
-        Section(isExpanded: $isExpanded) {
-            rows
-        } header: {
-            header
-        }
-    }
-
-    private var rows: some View {
-        ForEach(chapter.documents) { document in
-            SceneRow(document: document, lands: document.landsThreadIDs.count)
-                .padding(.leading, indented ? Space.medium : 0)
-                .tag(document.id)
-                .contextMenu { sceneMenu(document, workspace) }
-        }
-        .onMove(perform: reorderHandler)
-    }
-
-    private var header: some View {
-        GroupHeader(title: chapter.title, detail: chapter.wordCount.formatted())
-            .padding(.leading, indented ? Space.small : 0)
-            .contextMenu {
-                Button("Add Scene Here") { workspace.createScene(in: chapter) }
             }
-    }
-
-    /// `onMove` reports indices into *this chapter*. The manuscript is one flat
-    /// array, so both ends are translated into it before anything moves —
-    /// otherwise a drag inside chapter four would reorder chapter one.
-    private func move(_ offsets: IndexSet, to destination: Int) {
-        let ids = chapter.documents.map(\.id)
-        guard !ids.isEmpty else { return }
-        let all = workspace.project.documents.map(\.id)
-
-        let sources = IndexSet(offsets.compactMap { all.firstIndex(of: ids[$0]) })
-        let target: Int
-        if destination < ids.count {
-            target = all.firstIndex(of: ids[destination]) ?? all.count
-        } else {
-            // Dropped past the chapter's last row: land immediately after it.
-            target = all.firstIndex(of: ids[ids.count - 1]).map { $0 + 1 } ?? all.count
         }
-        workspace.moveDocuments(sources, to: target)
+        return prune(workspace.project.binder)
     }
 }
+
+// The derived outline that used to live here — `sceneMenu`, `VolumeSection`,
+// `ChapterSection` — is gone with the two-string hierarchy it drew. The
+// navigator is `BinderOutline` now, and the row menus belong to the rows.
 
 /// A scene, on one line.
 ///
@@ -342,7 +306,7 @@ private struct ChapterSection: View {
 /// That last one is why the payoff mark exists. Scrolling a long manuscript, the
 /// scenes that land a promise are the ones you must not move and must not cut, and
 /// you are always hunting for them. They earn a mark in the margin; nothing else does.
-private struct SceneRow: View {
+struct SceneRow: View {
     let document: StoryDocument
     let lands: Int
 
@@ -508,30 +472,98 @@ private struct JumpBar: View {
 
             Spacer(minLength: Space.small)
 
-            // The dot sits outside the menu, not inside its label. A borderless
-            // `Menu` renders a label made of text and symbols; hand it an arbitrary
-            // shape — a `Circle` — and AppKit quietly drops it, which is how the
-            // scene's status came to be drawn as the bare word "Revised", with no
-            // colour and no indicator, looking for all the world like a caption.
-            StatusDot(color: document.status.tint, filled: document.status.isFilled)
-
-            Menu {
-                ForEach(DocumentStatus.allCases, id: \.self) { status in
-                    Button {
-                        workspace.updateStatus(status)
-                    } label: {
-                        Label(status.title, systemImage: document.status == status ? "checkmark" : "")
-                    }
-                }
-            } label: {
-                Text(document.status.title)
-                    .font(Chrome.small)
-            }
-            .menuStyle(.borderlessButton)
-            .fixedSize()
-            .help("Scene status")
+            StatusPicker(status: document.status) { workspace.updateStatus($0) }
         }
         .background(Color(nsColor: style.pageColor))
+    }
+}
+
+// MARK: - Status
+
+/// Which draft this scene is in.
+///
+/// It was a `Menu`, and a menu could not do the job. AppKit draws the items, and
+/// it draws them from a `Label` — text and a symbol, nothing else. Hand it a
+/// `Circle` and it is quietly dropped, so the four statuses appeared as four
+/// bare words with a tick beside one of them. The colours were on screen in the
+/// binder, on every row, and nowhere at all in the list that assigns them: an
+/// author could see three colours of dot down the outline and had no way to find
+/// out which was which except by changing a scene and watching what happened.
+///
+/// A popover is drawn by SwiftUI, so the list can say the thing it is for. Each
+/// status carries its own dot, the current one is marked by being drawn in the
+/// accent colour rather than by a tick in a column, and the legend and the
+/// control are the same object.
+private struct StatusPicker: View {
+    let status: DocumentStatus
+    let select: (DocumentStatus) -> Void
+
+    @State private var isPresented = false
+
+    var body: some View {
+        Button {
+            isPresented = true
+        } label: {
+            HStack(spacing: Space.tight) {
+                StatusDot(color: status.tint, filled: status.isFilled)
+                Text(status.title)
+                    .font(Chrome.small)
+                GlyphIcon(glyph: .chevronDown, size: Icon.hint)
+                    .foregroundStyle(.tertiary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Scene status")
+        .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 1) {
+                ForEach(DocumentStatus.allCases, id: \.self) { option in
+                    StatusOption(option: option, isCurrent: option == status) {
+                        select(option)
+                        isPresented = false
+                    }
+                }
+            }
+            .padding(Space.tight)
+            .frame(width: 132)
+        }
+    }
+}
+
+private struct StatusOption: View {
+    let option: DocumentStatus
+    let isCurrent: Bool
+    let choose: () -> Void
+
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: choose) {
+            HStack(spacing: Space.snug) {
+                StatusDot(color: option.tint, filled: option.isFilled, size: 7)
+                Text(option.title)
+                    .font(isCurrent ? Chrome.strong : Chrome.body)
+                    .foregroundStyle(isCurrent ? Color.accentColor : .primary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, Space.snug)
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+            .background {
+                RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+                    .fill(fill)
+            }
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+    }
+
+    /// The current row keeps its tint whether or not the pointer is over it —
+    /// a highlight that disappears under the pointer is a highlight the author
+    /// has to move the mouse away to read.
+    private var fill: Color {
+        if isCurrent { return Color.accentColor.opacity(0.14) }
+        return isHovering ? Color.primary.opacity(0.07) : .clear
     }
 }
 
@@ -941,54 +973,59 @@ private struct EmptyPagePrompt: View {
 /// What the author might want to know, and nothing else. No streak, no goal, no
 /// ring, and no reading time — a novel is not an article and nobody has ever moved
 /// a scene because it was four minutes long.
-private struct TargetPopoverView: View {
+private struct ProjectTargetPopover: View {
     @EnvironmentObject private var workspace: WorkspaceModel
-    let document: StoryDocument
-    @State private var sceneTarget: String
     @State private var projectTarget: String
 
-    init(document: StoryDocument, projectTarget: Int) {
-        self.document = document
-        _sceneTarget = State(initialValue: "\(document.targetWordCount)")
+    init(projectTarget: Int) {
         _projectTarget = State(initialValue: "\(projectTarget)")
     }
 
-    /// Both fields commit as they are typed, not only on Return.
+    /// The book target commits as it is typed, not only on Return.
     ///
     /// They used to commit in `onSubmit` alone, which meant the overwhelmingly
     /// common way to leave a popover — clicking back onto the page — threw the
     /// number away without saying so. A field that quietly discards what you typed
     /// is worse than one that refuses it.
     var body: some View {
-        VStack(alignment: .leading, spacing: Space.small) {
-            SectionLabel("Word Count Targets")
+        VStack(alignment: .leading, spacing: Space.regular) {
+            SectionLabel("Book word target")
 
-            FieldRow("Scene Target") {
-                TextField("500", text: $sceneTarget)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 80)
-                    .monospacedDigit()
-                    .onChange(of: sceneTarget) { _, new in
-                        if let value = Int(new.trimmingCharacters(in: .whitespaces)) {
-                            workspace.updateTargetWordCount(value)
-                        }
-                    }
-            }
+            Text("A direction for the manuscript, not a quota for each scene.")
+                .font(Chrome.small)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
 
-            FieldRow("Project Target") {
+            HStack(spacing: Space.small) {
                 TextField("50000", text: $projectTarget)
                     .textFieldStyle(.roundedBorder)
-                    .frame(width: 80)
+                    .frame(width: 96)
                     .monospacedDigit()
                     .onChange(of: projectTarget) { _, new in
                         if let value = Int(new.trimmingCharacters(in: .whitespaces)) {
                             workspace.updateProjectWordTarget(value)
                         }
                     }
+
+                Text("words")
+                    .font(Chrome.small)
+                    .foregroundStyle(.secondary)
+            }
+
+            let total = workspace.project.totalWordCount
+            let target = workspace.project.story.projectWordTarget
+            if target > 0 {
+                ProgressView(value: min(1, Double(total) / Double(target)))
+                    .progressViewStyle(.linear)
+
+                Text("\(total.formatted()) written · \(max(0, target - total).formatted()) remaining")
+                    .font(Chrome.small)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
             }
         }
         .padding(Space.medium)
-        .frame(width: 220)
+        .frame(width: 260)
     }
 }
 
@@ -1000,13 +1037,8 @@ private struct EditorStatusBar: View {
 
     /// The book, not the page.
     ///
-    /// This line used to read "Scene Goal: 100%", and a scene goal is the wrong
-    /// number to leave on screen all day. It is satisfied constantly — every
-    /// short scene hits it — so it stops carrying information by the third
-    /// chapter, and worse, it invites writing *to a length* rather than to the
-    /// end of the scene. The project target is the number a novelist actually
-    /// wants at a glance: how much book there is. The scene's own target is
-    /// still here, one click away in the popover, for the people who use it.
+    /// A book target is the useful number: it says how much manuscript exists
+    /// without asking every scene to fill an arbitrary quota.
     private var projectProgress: Double {
         let target = workspace.project.story.projectWordTarget
         guard target > 0 else { return 0 }
@@ -1034,18 +1066,19 @@ private struct EditorStatusBar: View {
             } label: {
                 HStack(spacing: Space.snug) {
                     GlyphIcon(glyph: .goal, size: Icon.status)
-                    Text("\(workspace.project.totalWordCount.formatted()) of \(workspace.project.story.projectWordTarget.formatted())")
+                    Text("Book")
+                    Text("\(workspace.project.totalWordCount.formatted()) / \(workspace.project.story.projectWordTarget.formatted())")
                         .monospacedDigit()
                     ProgressView(value: projectProgress)
                         .progressViewStyle(.linear)
-                        .frame(width: 36)
+                        .frame(width: 52)
                 }
                 .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .help("Project target — click to change it, and this scene's")
+            .help("Book word target — click to change it")
             .popover(isPresented: $showingTargetPopover, arrowEdge: .bottom) {
-                TargetPopoverView(document: document, projectTarget: workspace.project.story.projectWordTarget)
+                ProjectTargetPopover(projectTarget: workspace.project.story.projectWordTarget)
             }
 
             Spacer(minLength: Space.small)
@@ -1277,17 +1310,9 @@ private struct SceneStrip: View {
 
     var body: some View {
         Strip {
-            Picker("", selection: Binding(
-                get: { document.status },
-                set: { workspace.updateStatus($0) }
-            )) {
-                ForEach(DocumentStatus.allCases, id: \.self) { status in
-                    Text(status.title).tag(status)
-                }
-            }
-            .labelsHidden()
-            .controlSize(.small)
-            .fixedSize()
+            // The same control as the scene header, so status is set one way in
+            // the application and the colours are explained wherever it appears.
+            StatusPicker(status: document.status) { workspace.updateStatus($0) }
 
             Spacer(minLength: Space.small)
 

@@ -49,6 +49,7 @@ nonisolated struct TrashedItem: Identifiable, Codable, Equatable, Sendable {
     var title: String {
         switch payload {
         case .document(let value): value.displayTitle
+        case .group(let item, _): item.displayName
         case .thread(let value): value.question.isEmpty ? "Untitled thread" : value.question
         case .entity(let value): value.displayName
         case .relationship(let value): value.summary.isEmpty ? "Relationship" : value.summary
@@ -61,6 +62,8 @@ nonisolated struct TrashedItem: Identifiable, Codable, Equatable, Sendable {
     var category: String {
         switch payload {
         case .document(let value): value.chapterTitle
+        case .group(let item, let documents):
+            documents.count == 1 ? "\(item.group.title) · 1 scene" : "\(item.group.title) · \(documents.count) scenes"
         case .thread: "Thread"
         case .entity: "Story"
         case .relationship: "Relationship"
@@ -69,9 +72,31 @@ nonisolated struct TrashedItem: Identifiable, Codable, Equatable, Sendable {
         }
     }
 
+    /// A short account of what is inside the discarded item. A trashed group is
+    /// one reversible operation, but it must never look like just a heading
+    /// vanished — this tells the author how much work is safely inside it.
+    var contentsSummary: String {
+        switch payload {
+        case .document(let value):
+            return value.wordCount > 0
+                ? "\(value.wordCount.formatted()) words"
+                : "Empty scene"
+        case .group(_, let documents):
+            let scenes = documents.count == 1 ? "1 scene" : "\(documents.count) scenes"
+            let words = documents.reduce(0) { $0 + $1.wordCount }
+            return words > 0 ? "\(scenes) · \(words.formatted()) words" : scenes
+        case .thread: return "Story thread"
+        case .entity: return "Story record"
+        case .relationship: return "Story relationship"
+        case .event: return "Timeline event"
+        case .note: return "Note"
+        }
+    }
+
     var icon: IconSource {
         switch payload {
         case .document(let value): value.kind.icon
+        case .group(let item, _): .glyph(item.group.glyph)
         case .thread(let value): value.kind.icon
         case .entity(let value): value.kind.icon
         case .relationship: .glyph(.relationshipEdge)
@@ -83,6 +108,7 @@ nonisolated struct TrashedItem: Identifiable, Codable, Equatable, Sendable {
     var tint: Color {
         switch payload {
         case .document(let value): value.kind.tint
+        case .group: .secondary
         case .thread(let value): value.kind.tint
         case .entity(let value): value.kind.tint
         case .relationship: .secondary
@@ -98,6 +124,13 @@ nonisolated struct TrashedItem: Identifiable, Codable, Equatable, Sendable {
 /// possible to construct one of these that is two things at once, or none.
 nonisolated enum TrashedPayload: Codable, Equatable, Sendable {
     case document(StoryDocument)
+    /// A group and everything under it: the subtree, and every scene it held.
+    ///
+    /// Stored whole rather than as one trash row per scene. Deleting Part Two
+    /// is one act and has to be one undo — offering the author thirty-one loose
+    /// scenes and asking them to rebuild the part by hand is not a safety net,
+    /// it is a punishment for a mis-click.
+    case group(BinderItem, [StoryDocument])
     case thread(StoryThread)
     case entity(StoryEntity)
     case relationship(StoryRelationship)

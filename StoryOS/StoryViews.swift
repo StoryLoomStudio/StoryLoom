@@ -37,7 +37,7 @@ struct EntityList: View {
                         Button("New \(kind.title)") { workspace.createEntity(kind: kind) }
                     }
                 } label: {
-                    GlyphIcon(glyph: .plus, size: Icon.control)
+                    Glyph.plus.menuImage(size: Icon.navigatorAction)
                 }
                 .help("New record")
             }
@@ -459,7 +459,7 @@ struct EventList: View {
                 Button {
                     workspace.createEvent()
                 } label: {
-                    GlyphIcon(glyph: .plus, size: Icon.control)
+                    GlyphIcon(glyph: .plus, size: Icon.navigatorAction)
                 }
                 .help("New event")
             }
@@ -674,11 +674,13 @@ struct NoteList: View {
     @State private var filter = ""
 
     private var notes: [StoryNote] {
-        guard !filter.isEmpty else { return workspace.project.story.notes }
-        return workspace.project.story.notes.filter {
+        let matching = workspace.project.story.notes.filter {
+            filter.isEmpty
+                ||
             $0.title.localizedCaseInsensitiveContains(filter)
                 || $0.body.localizedCaseInsensitiveContains(filter)
         }
+        return matching.sorted { $0.updatedAt > $1.updatedAt }
     }
 
     var body: some View {
@@ -687,7 +689,7 @@ struct NoteList: View {
                 Button {
                     workspace.createNote()
                 } label: {
-                    GlyphIcon(glyph: .plus, size: Icon.control)
+                    GlyphIcon(glyph: .plus, size: Icon.navigatorAction)
                 }
                 .help("New note")
             }
@@ -705,18 +707,11 @@ struct NoteList: View {
             } else {
                 List(selection: $workspace.selectedNoteID) {
                     ForEach(notes) { note in
-                        HStack(spacing: Space.snug) {
-                            Text(note.displayTitle)
-                                .font(Chrome.body)
-                                .lineLimit(1)
-                            Spacer(minLength: Space.tight)
-                            Text(note.updatedAt, style: .relative)
-                                .font(Chrome.small)
-                                .foregroundStyle(.tertiary)
-                                .lineLimit(1)
-                        }
+                        NoteRow(note: note)
                         .tag(note.id)
                         .contextMenu {
+                            Button("Duplicate") { workspace.duplicateNote(note) }
+                            Divider()
                             Button("Delete", role: .destructive) { workspace.deleteNote(note.id) }
                         }
                     }
@@ -727,6 +722,49 @@ struct NoteList: View {
                 .denseList()
             }
         }
+    }
+}
+
+/// A note is recognised by its thought as often as by its title. The preview and
+/// compact word count make a long list scannable without competing with writing.
+private struct NoteRow: View {
+    let note: StoryNote
+
+    var body: some View {
+        HStack(spacing: Space.snug) {
+            GlyphIcon(glyph: .note, size: Icon.inline)
+                .foregroundStyle(.secondary)
+                .frame(width: 13)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(note.displayTitle)
+                    .font(Chrome.body)
+                    .lineLimit(1)
+
+                Text(note.preview)
+                    .font(Chrome.small)
+                    .foregroundStyle(note.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .tertiary : .secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: Space.tight)
+
+            VStack(alignment: .trailing, spacing: 1) {
+                Text(note.updatedAt, style: .relative)
+                    .font(Chrome.small)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+
+                if note.wordCount > 0 {
+                    Text("\(note.wordCount.formatted()) words")
+                        .font(Chrome.micro)
+                        .foregroundStyle(.tertiary)
+                        .monospacedDigit()
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(note.displayTitle), \(note.wordCount) words, updated \(note.updatedAt.formatted(date: .abbreviated, time: .shortened))")
     }
 }
 
@@ -767,6 +805,26 @@ struct NoteEditor: View {
                     .padding(.horizontal, Space.page)
                     .padding(.vertical, Space.wide)
                     .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Strip(height: 22, divides: false) {
+                        Text("\(note.wordCount.formatted()) words")
+                            .font(Chrome.small)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+
+                        Text("·")
+                            .foregroundStyle(.quaternary)
+
+                        Text("Updated \(note.updatedAt, style: .relative)")
+                            .font(Chrome.small)
+                            .foregroundStyle(.secondary)
+
+                        Spacer(minLength: Space.small)
+
+                        Text("Not exported")
+                            .font(Chrome.small)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
             } else {
                 EmptyStateView(

@@ -48,7 +48,7 @@ struct ThreadList: View {
                         }
                     }
                 } label: {
-                    GlyphIcon(glyph: .plus, size: Icon.control)
+                    Glyph.plus.menuImage(size: Icon.navigatorAction)
                 }
                 .help("Open a new thread")
             }

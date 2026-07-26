@@ -18,23 +18,28 @@ nonisolated struct StoryProject: Codable, Equatable, Sendable {
     var documents: [StoryDocument]
     var story: StoryMetadata
     var archivedDocuments: [StoryDocument]
+    /// The outline. See `Binder.swift` — the tree owns *where* things are, and
+    /// `documents` owns what they say.
+    var binder: [BinderItem] = []
 
     nonisolated init(
         id: UUID = UUID(),
         title: String,
         documents: [StoryDocument],
         story: StoryMetadata = .init(),
-        archivedDocuments: [StoryDocument] = []
+        archivedDocuments: [StoryDocument] = [],
+        binder: [BinderItem] = []
     ) {
         self.id = id
         self.title = title
         self.documents = documents
         self.story = story
         self.archivedDocuments = archivedDocuments
+        self.binder = binder.isEmpty ? Self.binder(from: documents) : binder
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, title, documents, story, archivedDocuments
+        case id, title, documents, story, archivedDocuments, binder
     }
 
     nonisolated init(from decoder: Decoder) throws {
@@ -44,6 +49,54 @@ nonisolated struct StoryProject: Codable, Equatable, Sendable {
         documents = try container.decode([StoryDocument].self, forKey: .documents)
         story = try container.decodeIfPresent(StoryMetadata.self, forKey: .story) ?? .init()
         archivedDocuments = try container.decodeIfPresent([StoryDocument].self, forKey: .archivedDocuments) ?? []
+        var decoded = try container.decodeIfPresent([BinderItem].self, forKey: .binder) ?? []
+        if decoded.isEmpty { decoded = Self.binder(from: documents) }
+        decoded.reconcile(with: documents.map(\.id))
+        binder = decoded
+    }
+
+    /// Builds a tree from the old two-string outline, so a project written
+    /// before the binder existed opens with the shape its author gave it.
+    ///
+    /// Runs of equal `volume` and `chapter` become folders, in the order they
+    /// appear — the same contiguity rule the derived outline used, applied once
+    /// at migration and then never again.
+    nonisolated static func binder(from documents: [StoryDocument]) -> [BinderItem] {
+        var root: [BinderItem] = []
+        for document in documents {
+            let volume = document.volumeTitle
+            let chapter = document.chapterTitle
+            let leaf = BinderItem.document(document.id)
+
+            func appendToChapter(_ items: inout [BinderItem]) {
+                if let last = items.indices.last, items[last].isFolder, items[last].name == chapter {
+                    items[last].children.append(leaf)
+                } else {
+                    items.append(.folder(chapter, [leaf], group: .chapter))
+                }
+            }
+
+            if volume.isEmpty {
+                appendToChapter(&root)
+            } else {
+                if let last = root.indices.last, root[last].isFolder, root[last].name == volume {
+                    appendToChapter(&root[last].children)
+                } else {
+                    root.append(.folder(volume, [], group: .volume))
+                    appendToChapter(&root[root.count - 1].children)
+                }
+            }
+        }
+        return root
+    }
+
+    /// The manuscript in binder order. Structural edits reorder `documents` to
+    /// match, so everything downstream keeps reading a flat array.
+    nonisolated mutating func applyBinderOrder() {
+        binder.reconcile(with: documents.map(\.id))
+        let order = binder.documentIDs
+        let byID = Dictionary(uniqueKeysWithValues: documents.map { ($0.id, $0) })
+        documents = order.compactMap { byID[$0] }
     }
 
     var scenes: [StoryDocument] { documents.filter { $0.kind == .scene } }
@@ -70,32 +123,11 @@ nonisolated struct StoryProject: Codable, Equatable, Sendable {
         }
     }
 
-    /// True once any scene claims a volume. Until then the outline has two
-    /// tiers, not three, and says nothing about a level the book does not use.
-    var usesVolumes: Bool {
-        documents.contains { !$0.volumeTitle.isEmpty }
-    }
-
-    /// The manuscript as Volume → Chapter → Scene.
-    ///
-    /// Grouped by contiguity at both levels, for the same reason chapters are:
-    /// the array *is* the running order, and a book where "Part Two" appears,
-    /// gives way to an interlude, and then resumes is a book, not a mistake to
-    /// be tidied. Sorting by title would silently reorder the manuscript.
-    var volumes: [Volume] {
-        chapters.reduce(into: []) { groups, chapter in
-            let title = chapter.documents.first?.volumeTitle ?? ""
-            if let last = groups.last, last.title == title {
-                groups[groups.count - 1] = Volume(
-                    id: last.id,
-                    title: title,
-                    chapters: last.chapters + [chapter]
-                )
-            } else {
-                groups.append(Volume(id: chapter.id, title: title, chapters: [chapter]))
-            }
-        }
-    }
+    // `usesVolumes` and `volumes` lived here, deriving a two-tier outline from
+    // the `volume` and `chapter` strings. The binder replaced both. The strings
+    // stay on `StoryDocument`: they are still written to front matter, still
+    // read by anything outside StoryLoom, and still the source the binder is
+    // rebuilt from if it is ever lost.
 
     func document(_ id: StoryDocument.ID) -> StoryDocument? {
         documents.first { $0.id == id } ?? archivedDocuments.first { $0.id == id }

@@ -206,6 +206,12 @@ struct WorkspaceView: View {
             .help("Show or hide the inspector (⌥⌘I)")
             .disabled(workspace.library != .manuscript)
 
+        }
+
+        // Keep project-wide actions outside the three direct manuscript tools.
+        // The light, single-pixel circle makes this a deliberate overflow button
+        // without returning to the visually heavy ring it used to have.
+        ToolbarItem {
             Menu {
                 Button("Command Palette…") { sheet = .palette }
                 Button("Enter Focus") { workspace.isFocusMode = true }
@@ -216,8 +222,19 @@ struct WorkspaceView: View {
                 Button("Reveal in Finder") { revealInFinder() }
                     .disabled(workspace.projectURL == nil)
             } label: {
-                Label { Text("More") } icon: { GlyphIcon(glyph: .more, size: Icon.toolbar) }
+                GlyphIcon(glyph: .ellipsis, size: Icon.inline)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 26, height: 26)
+                    .background(Color.primary.opacity(0.035), in: Circle())
+                    .overlay {
+                        Circle()
+                            .strokeBorder(Palette.hairline, lineWidth: 1)
+                    }
+                    .contentShape(Circle())
             }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .help("More project actions")
         }
     }
 
@@ -232,11 +249,11 @@ struct WorkspaceView: View {
                 Banner(
                     glyph: .saving,
                     tint: Palette.caution,
-                    title: "This project changed on disk",
-                    message: "Something outside StoryLoom edited these files. Nothing has been overwritten."
+                    title: "External changes detected",
+                    message: "Choose whether to accept the changes on disk or keep your current version."
                 ) {
-                    Button("Reload from Disk") { workspace.reloadFromDisk() }
-                    Button("Keep My Version") { workspace.keepMyVersion() }
+                    Button("Decline") { workspace.keepMyVersion() }
+                    Button("Accept Changes") { workspace.reloadFromDisk() }
                         .buttonStyle(.borderedProminent)
                 }
             }
