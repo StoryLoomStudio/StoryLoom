@@ -194,7 +194,7 @@ struct SnapshotDetail: View {
     private func summary(_ snapshot: ProjectSnapshotRecord) -> String {
         let words = snapshot.wordCount.formatted()
         let documents = snapshot.documentCount
-        let delta = workspace.project.totalWordCount - snapshot.wordCount
+        let delta = workspace.totalWordCount - snapshot.wordCount
         let since = delta == 0 ? "the same as now" : (delta > 0 ? "\(delta.formatted()) fewer than now" : "\((-delta).formatted()) more than now")
         return "\(words) words · \(documents) document\(documents == 1 ? "" : "s") · \(since)"
     }

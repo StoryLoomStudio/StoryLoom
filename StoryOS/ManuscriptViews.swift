@@ -23,6 +23,8 @@ struct LibrarySidebar: View {
         }
         .listStyle(.sidebar)
         .denseList()
+        .scrollContentBackground(.hidden)
+        .background(Color(nsColor: .windowBackgroundColor))
         .safeAreaInset(edge: .top, spacing: 0) { ProjectHeader() }
         .safeAreaInset(edge: .bottom, spacing: 0) { floor }
     }
@@ -40,14 +42,34 @@ struct LibrarySidebar: View {
     }
 
     private func row(_ item: LibraryItem) -> some View {
-        Label {
-            Text(item.title)
-        } icon: {
-            IconView(item.icon, size: Icon.room)
+        let cnt = count(for: item)
+        return HStack {
+            Label {
+                Text(item.title)
+            } icon: {
+                IconView(item.icon, size: Icon.room)
+            }
+            Spacer()
+            if cnt > 0 {
+                Text(cnt.formatted())
+                    .font(Chrome.small)
+                    .monospacedDigit()
+                    .foregroundStyle(workspace.library == item ? .primary : .tertiary)
+            }
         }
-        .badge(count(for: item))
         .tag(item)
-        .help(item.question)
+        .help(item.question + (cnt > 0 ? " (\(countLabel(item, count: cnt)))" : ""))
+    }
+
+    private func countLabel(_ item: LibraryItem, count: Int) -> String {
+        switch item {
+        case .threads: return count == 1 ? "1 thread" : "\(count) threads"
+        case .story: return count == 1 ? "1 entity" : "\(count) entities"
+        case .timeline: return count == 1 ? "1 event" : "\(count) events"
+        case .notes: return count == 1 ? "1 note" : "\(count) notes"
+        case .trash: return count == 1 ? "1 item" : "\(count) items"
+        default: return ""
+        }
     }
 
     /// A count, not a badge. Nothing here is a red dot demanding to be cleared: an
@@ -95,7 +117,7 @@ private struct SidebarTrashButton: View {
                 if count > 0 {
                     Text(count.formatted())
                         .font(Chrome.small)
-                        .foregroundStyle(isSelected ? .primary : .secondary)
+                        .foregroundStyle(isSelected ? .primary : .tertiary)
                         .monospacedDigit()
                 }
             }
@@ -133,20 +155,21 @@ private struct BinderTrashDrop: DropDelegate {
     @Binding var isTargeted: Bool
     let workspace: WorkspaceModel
 
-    func validateDrop(info: DropInfo) -> Bool { workspace.draggingBinderID != nil }
+    func validateDrop(info: DropInfo) -> Bool { !workspace.draggingBinderIDs.isEmpty }
 
     func dropEntered(info: DropInfo) { isTargeted = true }
     func dropExited(info: DropInfo) { isTargeted = false }
 
     func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: workspace.draggingBinderID == nil ? .forbidden : .move)
+        DropProposal(operation: workspace.draggingBinderIDs.isEmpty ? .forbidden : .move)
     }
 
     func performDrop(info: DropInfo) -> Bool {
-        guard let id = workspace.draggingBinderID else { return false }
+        let ids = workspace.draggingBinderIDs
+        guard !ids.isEmpty else { return false }
         isTargeted = false
-        workspace.draggingBinderID = nil
-        return workspace.trashBinderItem(id)
+        workspace.endBinderDrag()
+        return workspace.trashBinderItems(ids)
     }
 }
 
@@ -170,7 +193,7 @@ private struct ProjectHeader: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 46)
         .padding(.horizontal, Space.medium)
-        .padding(.bottom, Space.small)
+        .padding(.bottom, 24)
         .accessibilityElement(children: .combine)
     }
 
@@ -178,7 +201,7 @@ private struct ProjectHeader: View {
     /// ring — the author asked the question by opening the app, and this answers it
     /// once and then stops talking.
     private var subtitle: String {
-        let total = workspace.project.totalWordCount.formatted()
+        let total = workspace.totalWordCount.formatted()
         let session = workspace.sessionWords
         return session > 0 ? "\(total) words · \(session.formatted()) today" : "\(total) words"
     }
@@ -215,7 +238,7 @@ struct ManuscriptNavigator: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            NavigatorBar(filter: $filter, prompt: "Filter manuscript") {
+            NavigatorBar(filter: $filter, prompt: "Filter structure…") {
                 // Scene first and alone, because it is what the author is
                 // here to make. The three structural groups are one step down;
                 // Folder is last, on its own, because it is the one that means
@@ -229,10 +252,13 @@ struct ManuscriptNavigator: View {
                     Divider()
                     Button("New Folder") { workspace.createGroup(.folder) }
                 } label: {
-                    // Baked, not laid out: a menu's label is drawn by AppKit,
-                    // which honours an `NSImage`'s size and ignores a frame.
-                    Glyph.plus.menuImage(size: Icon.navigatorAction)
+                    GlyphIcon(glyph: .plus, size: Icon.navigatorAction)
+                        .frame(width: 32, height: 32)
+                        .contentShape(Rectangle())
                 }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
                 .help("Add to the manuscript (⇧⌘N for a scene)")
             }
 
@@ -398,6 +424,7 @@ struct EditorCanvas: View {
                         set: { workspace.updateText($0) }
                     ),
                     selection: $workspace.editorSelection,
+                    isFocused: $workspace.editorIsFocused,
                     documentID: document.id,
                     style: style,
                     commentAnchors: workspace.comments.filter { !$0.isResolved }.map(\.anchor),
@@ -406,6 +433,7 @@ struct EditorCanvas: View {
                     command: workspace.editorCommand,
                     behaviour: TextBehaviour(
                         checksSpelling: settings.checksSpelling,
+                        spellingLanguage: settings.spellingLanguage,
                         checksGrammar: settings.checksGrammar,
                         smartQuotes: settings.smartQuotes,
                         smartDashes: settings.smartDashes
@@ -419,7 +447,6 @@ struct EditorCanvas: View {
 
                 if document.isEmpty {
                     EmptyPagePrompt(intention: document.intention)
-                        .allowsHitTesting(false)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -628,142 +655,124 @@ private struct FormatBar: View {
     }
 
     var body: some View {
-        Strip {
-            // Emphasis, in the order every word processor puts it.
-            FormatButton(glyph: InlineFormat.strong.glyph, help: "Bold (⌘B)",
-                         isActive: active.contains(.strong)) { workspace.toggleFormat(.strong) }
+        ScrollView(.horizontal) {
+            Strip {
+                FormatButton(glyph: InlineFormat.strong.glyph, help: "Bold (⌘B)",
+                             isActive: active.contains(.strong)) { workspace.toggleFormat(.strong) }
+                FormatButton(glyph: InlineFormat.emphasis.glyph, help: "Italic (⌘I)",
+                             isActive: active.contains(.emphasis)) { workspace.toggleFormat(.emphasis) }
+                FormatButton(glyph: .underline, help: "Underline (⌘U)",
+                             isActive: worn.underline) { workspace.toggleUnderline() }
+                FormatButton(glyph: InlineFormat.strikethrough.glyph, help: "Strikethrough (⇧⌘X)",
+                             isActive: active.contains(.strikethrough)) { workspace.toggleFormat(.strikethrough) }
 
-            FormatButton(glyph: InlineFormat.emphasis.glyph, help: "Italic (⌘I)",
-                         isActive: active.contains(.emphasis)) { workspace.toggleFormat(.emphasis) }
+                BarDivider()
 
-            FormatButton(glyph: .underline, help: "Underline (⌘U)",
-                         isActive: worn.underline) { workspace.toggleUnderline() }
-
-            FormatButton(glyph: InlineFormat.strikethrough.glyph, help: "Strikethrough (⇧⌘X)",
-                         isActive: active.contains(.strikethrough)) { workspace.toggleFormat(.strikethrough) }
-
-            BarDivider()
-
-            // Structure. All of this is real Markdown in the file.
-            Menu {
-                Button("Body Text") { workspace.setHeading(0) }
-                Divider()
-                Button("Heading 1") { workspace.setHeading(1) }
-                Button("Heading 2") { workspace.setHeading(2) }
-                Button("Heading 3") { workspace.setHeading(3) }
-            } label: {
-                Label { Text("Paragraph style") } icon: { Glyph.heading.menuImage(size: Icon.formatter) }
-                    .labelStyle(.iconOnly)
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .help("Paragraph style")
-
-            FormatButton(glyph: .list, help: "Bulleted list") {
-                workspace.toggleList(ordered: false)
-            }
-            FormatButton(glyph: .listOrdered, help: "Numbered list") {
-                workspace.toggleList(ordered: true)
-            }
-            FormatButton(glyph: .textQuote, help: "Quote") { workspace.toggleBlockquote() }
-            FormatButton(glyph: .asterisk, help: "Scene break (⇧⌘−)") { workspace.insertSceneBreak() }
-
-            BarDivider()
-
-            // Alignment.
-            ForEach(TextAlignmentChoice.allCases) { choice in
-                FormatButton(glyph: choice.glyph, help: choice.title,
-                             isActive: layer.alignment(at: workspace.editorSelection.range) == choice) {
-                    workspace.setAlignment(choice)
+                Menu {
+                    Button("Body Text") { workspace.setHeading(0) }
+                    Button("Heading 1") { workspace.setHeading(1) }
+                    Button("Heading 2") { workspace.setHeading(2) }
+                    Button("Heading 3") { workspace.setHeading(3) }
+                    Divider()
+                    Button("Bulleted List") { workspace.toggleList(ordered: false) }
+                    Button("Numbered List") { workspace.toggleList(ordered: true) }
+                    Button("Quote") { workspace.toggleBlockquote() }
+                    Button("Scene Break (⇧⌘−)") { workspace.insertSceneBreak() }
+                } label: {
+                    Label("Structure", systemImage: "text.alignleft")
                 }
-            }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .help("Headings, lists, quotes, and scene breaks")
 
-            BarDivider()
-
-            // Highlighter: four colours, plus the Markdown `==` one that survives
-            // the file. The swatches are presentation; `==` is text.
-            Menu {
-                Button("Marked (==, saved in the file)") { workspace.toggleHighlight() }
-                Divider()
-                ForEach(HighlightColour.allCases) { colour in
-                    Button(colour.title) { workspace.setHighlightColour(colour) }
+                Menu {
+                    ForEach(TextAlignmentChoice.allCases) { choice in
+                        Button {
+                            workspace.setAlignment(choice)
+                        } label: {
+                            if layer.alignment(at: workspace.editorSelection.range) == choice {
+                                Label(choice.title, systemImage: "checkmark")
+                            } else {
+                                Text(choice.title)
+                            }
+                        }
+                    }
+                } label: {
+                    Label("Align", systemImage: "text.alignleft")
                 }
-                Divider()
-                Button("None") { workspace.setHighlightColour(nil) }
-            } label: {
-                Label { Text("Highlight") } icon: { InlineFormat.highlight.glyph.menuImage(size: Icon.formatter) }
-                    .labelStyle(.iconOnly)
-                    .foregroundStyle(worn.highlight?.swatch ?? Color.secondary)
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .help("Highlight")
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .help("Paragraph alignment")
 
-            BarDivider()
-
-            // Face and size for this passage only.
-            Menu {
-                Button("Match the page") { workspace.setFace(nil) }
-                Divider()
-                ForEach(ProseFace.available) { face in
-                    Button(face.title) { workspace.setFace(face.font(size: 12).fontName) }
+                Menu {
+                    Button("Marked (==, saved in the file)") { workspace.toggleHighlight() }
+                    Divider()
+                    ForEach(HighlightColour.allCases) { colour in
+                        Button(colour.title) { workspace.setHighlightColour(colour) }
+                    }
+                    Divider()
+                    Button("None") { workspace.setHighlightColour(nil) }
+                } label: {
+                    Label("Highlight", systemImage: "highlighter")
+                        .foregroundStyle(worn.highlight?.swatch ?? Color.secondary)
                 }
-            } label: {
-                Label { Text("Font") } icon: { Glyph.fontFace.menuImage(size: Icon.formatter) }
-                    .labelStyle(.iconOnly)
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .help("Font for the selection")
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .help("Markdown and presentation highlights")
 
-            Menu {
-                Button("Match the page") { workspace.setFontSize(nil) }
-                Divider()
-                ForEach([11, 12, 13, 14, 16, 18, 20, 24, 30, 36], id: \.self) { size in
-                    Button("\(size) pt") { workspace.setFontSize(Double(size)) }
+                Menu {
+                    Menu("Font") {
+                        Button("Match the page") { workspace.setFace(nil) }
+                        Divider()
+                        ForEach(ProseFace.available) { face in
+                            Button(face.title) { workspace.setFace(face.font(size: 12).fontName) }
+                        }
+                    }
+                    Menu("Size") {
+                        Button("Match the page") { workspace.setFontSize(nil) }
+                        Divider()
+                        ForEach([11, 12, 13, 14, 16, 18, 20, 24, 30, 36], id: \.self) { size in
+                            Button("\(size) pt") { workspace.setFontSize(Double(size)) }
+                        }
+                    }
+                } label: {
+                    Label("More Type", systemImage: "textformat.size")
                 }
-            } label: {
-                HStack(spacing: Space.hair) {
-                    Label { Text("Size") } icon: { Glyph.fontSize.menuImage(size: Icon.formatter) }
-                        .labelStyle(.iconOnly)
-                    Text(worn.fontSize.map { "\(Int($0))" } ?? "—")
-                        .font(Chrome.small)
-                        .monospacedDigit()
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .help("Selection-specific font and size")
+
+                FormatButton(glyph: .comment, help: "Add comment (⌥⌘C)",
+                             isEnabled: !workspace.editorSelection.isEmpty) {
+                    workspace.addComment(range: workspace.editorSelection.range)
                 }
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .help("Size for the selection")
 
-            BarDivider()
+                BarDivider()
 
-            FormatButton(glyph: .comment, help: "Add comment (⌥⌘C)",
-                         isEnabled: !workspace.editorSelection.isEmpty) {
-                workspace.addComment(range: workspace.editorSelection.range)
-            }
+                FormatButton(
+                    glyph: settings.viewMode == .page ? .pageView : .continuousView,
+                    help: settings.viewMode == .page ? "Switch to continuous view" : "Switch to page view",
+                    isActive: settings.viewMode == .page
+                ) {
+                    settings.viewMode = settings.viewMode == .page ? .continuous : .page
+                }
 
-            Spacer(minLength: Space.small)
-
-            FormatButton(
-                glyph: settings.viewMode == .page ? .pageView : .continuousView,
-                help: settings.viewMode == .page ? "Switch to continuous view" : "Switch to page view",
-                isActive: settings.viewMode == .page
-            ) {
-                settings.viewMode = settings.viewMode == .page ? .continuous : .page
-            }
-
-            FormatButton(
-                glyph: settings.appearance.glyph,
-                help: "Appearance: \(settings.appearance.title) — click for \(settings.appearance.next.title)",
-                isActive: settings.appearance != .system
-            ) {
-                settings.appearance = settings.appearance.next
+                FormatButton(
+                    glyph: settings.appearance.glyph,
+                    help: "Appearance: \(settings.appearance.title) — click for \(settings.appearance.next.title)",
+                    isActive: settings.appearance != .system
+                ) {
+                    settings.appearance = settings.appearance.next
+                }
             }
         }
+        .frame(height: Metrics.strip)
+        .scrollIndicators(.hidden)
+        .accessibilityHint("Scroll horizontally for additional formatting controls")
         .background(Color(nsColor: style.pageColor))
     }
 }
@@ -947,26 +956,45 @@ private struct TypePanel: View {
 private struct EmptyPagePrompt: View {
     let intention: String
     @Environment(\.proseStyle) private var style
+    @State private var showingGuide = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.tight) {
-            if intention.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text("Begin.")
-                    .font(.system(size: 15, design: .serif))
-                    .italic()
-            } else {
-                SectionLabel("What this scene is for")
-                Text(intention)
-                    .font(.system(size: 14, design: .serif))
-                    .italic()
-                    .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: Space.tight) {
+                if intention.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text("Begin.")
+                        .font(.system(size: 15, design: .serif))
+                        .italic()
+                } else {
+                    SectionLabel("What this scene is for")
+                    Text(intention)
+                        .font(.system(size: 14, design: .serif))
+                        .italic()
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
+            .accessibilityHidden(true)
+
+            Button("How StoryLoom works") { showingGuide = true }
+                .buttonStyle(.link)
+                .font(Chrome.small)
+                .foregroundStyle(Color.accentColor)
+                .popover(isPresented: $showingGuide, arrowEdge: .top) {
+                    VStack(alignment: .leading, spacing: Space.small) {
+                        Text("Write the scene here.")
+                            .font(Chrome.strong)
+                        Text("Use the inspector to capture what changes. Threads track questions and promises across scenes; comments keep notes attached to the words they refer to.")
+                            .font(Chrome.body)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(Space.regular)
+                    .frame(width: 280, alignment: .leading)
+                }
         }
         .foregroundStyle(Color(nsColor: style.mutedColor))
         .frame(maxWidth: style.measureWidth, alignment: .leading)
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.top, style.firstLineOffset)
-        .accessibilityHidden(true)
     }
 }
 
@@ -1012,7 +1040,7 @@ private struct ProjectTargetPopover: View {
                     .foregroundStyle(.secondary)
             }
 
-            let total = workspace.project.totalWordCount
+            let total = workspace.totalWordCount
             let target = workspace.project.story.projectWordTarget
             if target > 0 {
                 ProgressView(value: min(1, Double(total) / Double(target)))
@@ -1042,13 +1070,15 @@ private struct EditorStatusBar: View {
     private var projectProgress: Double {
         let target = workspace.project.story.projectWordTarget
         guard target > 0 else { return 0 }
-        return min(1.0, Double(workspace.project.totalWordCount) / Double(target))
+        return min(1.0, Double(workspace.totalWordCount) / Double(target))
     }
 
     var body: some View {
         Strip(height: 22, divides: false) {
-            Text("\(document.wordCount.formatted()) words")
-                .monospacedDigit()
+            if settings.showsWordCount {
+                Text("\(workspace.wordCount(of: document).formatted()) words")
+                    .monospacedDigit()
+            }
 
             if !workspace.editorSelection.isEmpty {
                 Text("·")
@@ -1056,29 +1086,40 @@ private struct EditorStatusBar: View {
                 Text("\(selectedWords.formatted()) selected")
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
+            } else if settings.showsReadingTime {
+                Text("·")
+                    .foregroundStyle(.quaternary)
+                let minutes = max(1, workspace.wordCount(of: document) / 250)
+                Text("\(minutes) min read")
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
             }
 
-            Text("·")
-                .foregroundStyle(.quaternary)
+            if settings.showsTarget {
+                Text("·")
+                    .foregroundStyle(.quaternary)
 
-            Button {
-                showingTargetPopover.toggle()
-            } label: {
-                HStack(spacing: Space.snug) {
-                    GlyphIcon(glyph: .goal, size: Icon.status)
-                    Text("Book")
-                    Text("\(workspace.project.totalWordCount.formatted()) / \(workspace.project.story.projectWordTarget.formatted())")
-                        .monospacedDigit()
-                    ProgressView(value: projectProgress)
-                        .progressViewStyle(.linear)
-                        .frame(width: 52)
+                Button {
+                    showingTargetPopover.toggle()
+                } label: {
+                    HStack(spacing: Space.snug) {
+                        GlyphIcon(glyph: .goal, size: Icon.status)
+                        Text("Book")
+                        Text("\(workspace.totalWordCount.formatted()) / \(workspace.project.story.projectWordTarget.formatted())")
+                            .monospacedDigit()
+                        ProgressView(value: projectProgress)
+                            .progressViewStyle(.linear)
+                            .frame(width: 52)
+                        Text("\(Int(projectProgress * 100))%")
+                            .monospacedDigit()
+                    }
+                    .foregroundStyle(.secondary)
                 }
-                .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .help("Book word target — click to change it")
-            .popover(isPresented: $showingTargetPopover, arrowEdge: .bottom) {
-                ProjectTargetPopover(projectTarget: workspace.project.story.projectWordTarget)
+                .buttonStyle(.plain)
+                .help("Book word target — click to change it")
+                .popover(isPresented: $showingTargetPopover, arrowEdge: .bottom) {
+                    ProjectTargetPopover(projectTarget: workspace.project.story.projectWordTarget)
+                }
             }
 
             Spacer(minLength: Space.small)
@@ -1106,6 +1147,14 @@ private struct EditorStatusBar: View {
                 .foregroundStyle(.secondary)
                 .help(open == 1 ? "1 comment" : "\(open) comments")
             }
+
+            GlyphIcon(glyph: workspace.persistence.glyph, size: Icon.inline)
+                .foregroundStyle(workspace.persistence.tint)
+                .accessibilityHidden(true)
+            Text(workspace.persistence.title)
+                .foregroundStyle(workspace.persistence.tint)
+                .lineLimit(1)
+                .accessibilityLabel("Document save status: \(workspace.persistence.title)")
         }
         .font(Chrome.small)
         .overlay(alignment: .top) {
@@ -1298,7 +1347,7 @@ private struct Question: View {
             Text(title)
                 .font(Chrome.small)
                 .foregroundStyle(.secondary)
-            QuietText(placeholder: prompt, text: $text)
+            QuietText(placeholder: prompt, text: $text, accessibilityLabel: title)
         }
     }
 }
@@ -1316,7 +1365,7 @@ private struct SceneStrip: View {
 
             Spacer(minLength: Space.small)
 
-            Text("\(document.wordCount.formatted()) words")
+            Text("\(workspace.wordCount(of: document).formatted()) words")
                 .font(Chrome.small)
                 .foregroundStyle(.tertiary)
                 .monospacedDigit()
@@ -1473,7 +1522,8 @@ private struct CommentRow: View {
                     get: { comment.body },
                     set: { workspace.updateComment(comment.id, body: $0) }
                 ),
-                size: 11
+                size: 11,
+                accessibilityLabel: "Comment on: \(comment.anchor.excerpt)"
             )
         }
         .padding(.vertical, Space.snug)

@@ -85,6 +85,7 @@ nonisolated struct EditorCommandRequest: Equatable {
 /// novelist invents words, and a tool that "fixes" them is an adversary.
 nonisolated struct TextBehaviour: Equatable, Sendable {
     var checksSpelling = true
+    var spellingLanguage = SpellingLanguage.britishEnglish
     var checksGrammar = false
     var smartQuotes = true
     var smartDashes = true
@@ -95,6 +96,7 @@ nonisolated struct TextBehaviour: Equatable, Sendable {
 struct ManuscriptEditor: NSViewRepresentable {
     @Binding var text: String
     @Binding var selection: EditorSelection
+    @Binding var isFocused: Bool
 
     let documentID: UUID
     let style: ProseStyle
@@ -220,6 +222,8 @@ struct ManuscriptEditor: NSViewRepresentable {
     }
 
     static func dismantleNSView(_ scrollView: ManuscriptScrollView, coordinator: Coordinator) {
+        coordinator.cancelPendingDecorationRefresh()
+        coordinator.parent.isFocused = false
         NotificationCenter.default.removeObserver(coordinator)
     }
 
@@ -250,9 +254,15 @@ struct ManuscriptEditor: NSViewRepresentable {
         private var lastCommandToken: UUID?
         private var revealRange: NSRange?
         private var revealDismissal: Task<Void, Never>?
+        private var decorationRefresh: Task<Void, Never>?
         private var shouldOfferMentions = false
         private var hasCommentDecorations = false
         private var hasFocusDimming = false
+        private var commentDecorationRanges: [NSRange] = []
+        private var focusDecorationRanges: [NSRange] = []
+        private var resolvedCommentRanges: [NSRange] = []
+        private var resolvedCommentAnchors: [TextAnchor] = []
+        private var commentsNeedResolve = true
 
         init(_ parent: ManuscriptEditor) {
             self.parent = parent
@@ -269,6 +279,7 @@ struct ManuscriptEditor: NSViewRepresentable {
             guard let textView, let storage = textView.textStorage else { return }
             isLoading = true
             self.documentID = documentID
+            commentsNeedResolve = true
             // Offsets from a previous session may be stale — the file could have
             // been edited elsewhere — so every span re-finds its words here, and
             // any that cannot are dropped rather than guessed at.
@@ -291,10 +302,18 @@ struct ManuscriptEditor: NSViewRepresentable {
             guard let textView, let storage = textView.textStorage else { return }
             isLoading = true
             let caret = textView.selectedRange()
+            presentation = parent.presentation
+            presentation.reanchor(in: text)
             storage.setAttributedString(NSAttributedString(string: text, attributes: ProseStyler.typingAttributes(style)))
             restyleEverything()
             textView.setSelectedRange(caret.clamped(to: (text as NSString).length))
             isLoading = false
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.parent.onPresentationChange?(self.presentation)
+            }
+            refreshDecorations()
+            reportSelection()
         }
 
         // MARK: Style
@@ -324,6 +343,12 @@ struct ManuscriptEditor: NSViewRepresentable {
         func apply(behaviour: TextBehaviour) {
             self.behaviour = behaviour
             guard let textView else { return }
+            let spellChecker = NSSpellChecker.shared
+            // Automatic language detection can choose a regional dictionary from
+            // macOS preferences. Keep manuscripts on the author's explicit UK/US
+            // choice instead (British English is the default).
+            spellChecker.automaticallyIdentifiesLanguages = false
+            _ = spellChecker.setLanguage(behaviour.spellingLanguage.rawValue)
             textView.isContinuousSpellCheckingEnabled = behaviour.checksSpelling
             textView.isGrammarCheckingEnabled = behaviour.checksGrammar
             textView.isAutomaticQuoteSubstitutionEnabled = behaviour.smartQuotes
@@ -432,10 +457,8 @@ struct ManuscriptEditor: NSViewRepresentable {
         func updateGeometry() {
             guard let textView, textView.frame.width > 1 else { return }
             let available = textView.frame.width
-
-            let minimumSide: CGFloat = 28
-            let target = min(style.measureWidth, max(280, available - minimumSide * 2))
-            let inset = max(minimumSide, ((available - target) / 2).rounded())
+            let geometry = ManuscriptTextView.columnGeometry(available: available, measureWidth: style.measureWidth)
+            let inset = geometry.inset
             let topInset = style.topTextInset
 
             if abs(textView.textContainerInset.width - inset) > 0.5 || abs(textView.textContainerInset.height - topInset) > 0.5 {
@@ -455,9 +478,19 @@ struct ManuscriptEditor: NSViewRepresentable {
             updateFocusDimming()
         }
 
-        /// The document as a text range, for the whole-document clears below.
-        private var documentTextRange: NSTextRange? {
-            layoutManager?.documentRange
+        private func scheduleDecorationRefresh() {
+            decorationRefresh?.cancel()
+            decorationRefresh = Task { [weak self] in
+                try? await Task.sleep(for: .milliseconds(220))
+                guard !Task.isCancelled else { return }
+                self?.refreshDecorations()
+            }
+        }
+
+        func cancelPendingDecorationRefresh() {
+            decorationRefresh?.cancel()
+            decorationRefresh = nil
+            revealDismissal?.cancel()
         }
 
         /// Translate a character range into the text range TextKit 2 speaks.
@@ -470,7 +503,7 @@ struct ManuscriptEditor: NSViewRepresentable {
         }
 
         private func updateCommentWashes() {
-            guard let textView, let layoutManager, let full = documentTextRange else { return }
+            guard let textView, let layoutManager else { return }
             let needsWashes = !parent.commentAnchors.isEmpty || revealRange != nil
             // Removing a rendering attribute over an entire manuscript is not
             // free. Most scene switches have neither comments nor a reveal, so
@@ -478,31 +511,51 @@ struct ManuscriptEditor: NSViewRepresentable {
             // painted a wash that now needs clearing.
             guard needsWashes || hasCommentDecorations else { return }
             let length = (textView.string as NSString).length
-            layoutManager.removeRenderingAttribute(.backgroundColor, for: full)
-            hasCommentDecorations = needsWashes
+            for previous in commentDecorationRanges {
+                if let range = textRange(previous.clamped(to: length)) {
+                    layoutManager.removeRenderingAttribute(.backgroundColor, for: range)
+                }
+            }
+            commentDecorationRanges.removeAll(keepingCapacity: true)
+            hasCommentDecorations = false
 
-            for anchor in parent.commentAnchors {
-                guard let resolved = anchor.resolve(in: textView.string),
-                      let range = textRange(resolved.clamped(to: length)) else { continue }
+            if commentsNeedResolve || resolvedCommentAnchors != parent.commentAnchors {
+                resolvedCommentAnchors = parent.commentAnchors
+                resolvedCommentRanges = parent.commentAnchors.compactMap { $0.resolve(in: textView.string) }
+                commentsNeedResolve = false
+            }
+
+            for resolved in resolvedCommentRanges {
+                let safe = resolved.clamped(to: length)
+                guard let range = textRange(safe) else { continue }
                 layoutManager.addRenderingAttribute(.backgroundColor, value: style.commentWashColor, for: range)
+                commentDecorationRanges.append(safe)
             }
 
-            if let revealRange, revealRange.location != NSNotFound,
-               let range = textRange(revealRange.clamped(to: length)) {
+            if let revealRange, revealRange.location != NSNotFound {
+                let safe = revealRange.clamped(to: length)
+                guard let range = textRange(safe) else { return }
                 layoutManager.addRenderingAttribute(.backgroundColor, value: style.revealWashColor, for: range)
+                commentDecorationRanges.append(safe)
             }
+            hasCommentDecorations = !commentDecorationRanges.isEmpty
         }
 
         private func updateFocusDimming() {
-            guard let textView, let layoutManager, let full = documentTextRange else { return }
+            guard let textView, let layoutManager else { return }
             let needsDimming = style.focus != .off
             // As above, do not sweep the whole document's foreground attributes
             // when focus mode is off and the previous scene did not use it.
             guard needsDimming || hasFocusDimming else { return }
 
             let string = textView.string as NSString
-            layoutManager.removeRenderingAttribute(.foregroundColor, for: full)
-            hasFocusDimming = needsDimming
+            for previous in focusDecorationRanges {
+                if let range = textRange(previous.clamped(to: string.length)) {
+                    layoutManager.removeRenderingAttribute(.foregroundColor, for: range)
+                }
+            }
+            focusDecorationRanges.removeAll(keepingCapacity: true)
+            hasFocusDimming = false
 
             guard needsDimming,
                   let focus = ProseStyler.focusRange(in: string, selection: textView.selectedRange(), depth: style.focus)
@@ -519,7 +572,11 @@ struct ManuscriptEditor: NSViewRepresentable {
 
             func dim(_ range: NSRange) {
                 guard range.length > 0, let target = textRange(range) else { return }
-                layoutManager.addRenderingAttribute(.foregroundColor, value: style.mutedColor, for: target)
+                let dimColor = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
+                    ? style.inkColor
+                    : style.focusMutedColor
+                layoutManager.addRenderingAttribute(.foregroundColor, value: dimColor, for: target)
+                focusDecorationRanges.append(range)
             }
 
             if start < focusStart {
@@ -529,6 +586,7 @@ struct ManuscriptEditor: NSViewRepresentable {
                 let location = max(start, focusEnd)
                 dim(NSRange(location: location, length: end - location))
             }
+            hasFocusDimming = !focusDecorationRanges.isEmpty
         }
 
         /// The character range currently laid out for the viewport.
@@ -608,7 +666,7 @@ struct ManuscriptEditor: NSViewRepresentable {
 
             guard abs(clip.bounds.origin.y - y) > 0.5 else { return }
             let destination = NSPoint(x: 0, y: y)
-            if animated {
+            if animated && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
                 NSAnimationContext.runAnimationGroup { context in
                     context.duration = 0.12
                     context.allowsImplicitAnimation = true
@@ -666,7 +724,8 @@ struct ManuscriptEditor: NSViewRepresentable {
         func textDidChange(_ notification: Notification) {
             guard !isLoading, let textView else { return }
             parent.text = textView.string
-            refreshDecorations()
+            commentsNeedResolve = true
+            scheduleDecorationRefresh()
             reportSelection()
 
             if style.typewriter {
@@ -690,6 +749,14 @@ struct ManuscriptEditor: NSViewRepresentable {
             if style.typewriter, NSApp.currentEvent?.type == .keyDown {
                 scrollToTypewriterLine(animated: true)
             }
+        }
+
+        func textDidBeginEditing(_ notification: Notification) {
+            if !parent.isFocused { parent.isFocused = true }
+        }
+
+        func textDidEndEditing(_ notification: Notification) {
+            if parent.isFocused { parent.isFocused = false }
         }
 
         func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString: String?) -> Bool {
@@ -854,14 +921,14 @@ final class ManuscriptTextView: NSTextView {
 
             // Calculate paper card bounds
             let available = bounds.width
-            let minimumSide: CGFloat = 28
-            let target = min(coordinator.style.measureWidth, max(280, available - minimumSide * 2))
-            let inset = max(minimumSide, ((available - target) / 2).rounded())
+            let geometry = Self.columnGeometry(available: available, measureWidth: coordinator.style.measureWidth)
+            let target = geometry.width
+            let inset = geometry.inset
 
             let paperRect = NSRect(
-                x: inset - 20,
+                x: inset - 12,
                 y: 12,
-                width: target + 40,
+                width: target + 24,
                 height: max(bounds.height - 24, (enclosingScrollView?.bounds.height ?? bounds.height) - 24)
             )
 
@@ -888,6 +955,14 @@ final class ManuscriptTextView: NSTextView {
         } else {
             super.drawBackground(in: rect)
         }
+    }
+
+    static func columnGeometry(available: CGFloat, measureWidth: CGFloat) -> (inset: CGFloat, width: CGFloat) {
+        // Leave room for the card's 12-point edge on both sides, even when the
+        // detail column is narrowed by a visible inspector or split view.
+        let side = min(28, max(8, available * 0.08))
+        let width = max(0, min(measureWidth, available - side * 2 - 24))
+        return ((available - width) / 2, width)
     }
 
     // MARK: Invisible markers

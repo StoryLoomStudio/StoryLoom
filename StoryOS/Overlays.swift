@@ -23,6 +23,7 @@ struct CommandPalette: View {
     @FocusState private var focused: Bool
 
     var body: some View {
+        let visibleEntries = entries
         VStack(spacing: 0) {
             HStack(spacing: Space.small) {
                 GlyphIcon(glyph: .command, size: Icon.control)
@@ -42,7 +43,7 @@ struct CommandPalette: View {
 
             Divider()
 
-            if entries.isEmpty {
+            if visibleEntries.isEmpty {
                 EmptyStateView(
                     glyph: .search,
                     title: "Nothing matches",
@@ -53,10 +54,14 @@ struct CommandPalette: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 0) {
-                            ForEach(Array(entries.enumerated()), id: \.element.id) { position, entry in
-                                PaletteRow(entry: entry, isHighlighted: position == highlighted)
+                            ForEach(Array(visibleEntries.enumerated()), id: \.element.id) { position, entry in
+                                Button {
+                                    execute(entry)
+                                } label: {
+                                    PaletteRow(entry: entry, isHighlighted: position == highlighted)
+                                }
+                                    .buttonStyle(.plain)
                                     .id(position)
-                                    .onTapGesture { execute(entry) }
                                     .onHover { if $0 { highlighted = position } }
                             }
                         }
@@ -409,11 +414,8 @@ struct SearchPanel: View {
     @EnvironmentObject private var workspace: WorkspaceModel
 
     @State private var query = ""
+    @State private var hits: [SearchHit] = []
     @FocusState private var focused: Bool
-
-    private var hits: [SearchHit] {
-        workspace.search(query)
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -467,6 +469,22 @@ struct SearchPanel: View {
         }
         .frame(width: 680, height: 480)
         .task { focused = true }
+        .task(id: query) {
+            let requested = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !requested.isEmpty else {
+                hits = []
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(180))
+            guard !Task.isCancelled else { return }
+            let project = workspace.project
+            let history = workspace.history
+            let results = await Task.detached(priority: .userInitiated) {
+                SearchEngine.search(requested, in: project, history: history)
+            }.value
+            guard !Task.isCancelled, requested == query.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+            hits = results
+        }
     }
 
     private func open(_ hit: SearchHit) {
@@ -543,21 +561,127 @@ private struct SearchHelp: View {
 
 // MARK: - Export
 
+private enum ExportTab: String, CaseIterable, Identifiable {
+    case preview = "Preview"
+    case overview = "Overview & Warnings"
+
+    var id: String { rawValue }
+}
+
+struct ExportDocumentPreviewView: NSViewRepresentable {
+    let attributedText: NSAttributedString
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSScrollView()
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.borderType = .noBorder
+        scrollView.drawsBackground = true
+        scrollView.backgroundColor = .textBackgroundColor
+
+        let contentSize = scrollView.contentSize
+        let textView = NSTextView(frame: NSRect(origin: .zero, size: contentSize))
+        textView.minSize = NSSize(width: 0.0, height: contentSize.height)
+        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width]
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.backgroundColor = .textBackgroundColor
+        textView.textContainer?.containerSize = NSSize(width: contentSize.width, height: CGFloat.greatestFiniteMagnitude)
+        textView.textContainer?.widthTracksTextView = true
+        textView.textContainerInset = NSSize(width: 28, height: 28)
+
+        scrollView.documentView = textView
+        return scrollView
+    }
+
+    func updateNSView(_ nsView: NSScrollView, context: Context) {
+        if let textView = nsView.documentView as? NSTextView {
+            textView.textStorage?.setAttributedString(attributedText)
+        }
+    }
+}
+
 struct ExportPanel: View {
     @Binding var sheet: WorkspaceSheet?
     @EnvironmentObject private var workspace: WorkspaceModel
     @EnvironmentObject private var settings: AppSettings
 
     @State private var profile = ExportProfile()
+    @State private var selectedTab: ExportTab = .preview
+    @State private var copiedToClipboard = false
 
     private var preview: ExportPreview {
-        ExportService.preview(workspace.project, profile: profile)
+        ExportService.preview(
+            workspace.project,
+            presentation: workspace.presentation,
+            profile: profile,
+            selectedDocumentID: workspace.selectedDocumentID
+        )
+    }
+
+    private var includedDocuments: [StoryDocument] {
+        ExportService.selection(
+            workspace.project,
+            profile: profile,
+            selectedDocumentID: workspace.selectedDocumentID
+        )
+    }
+
+    private var previewText: String {
+        ExportService.previewText(
+            workspace.project,
+            presentation: workspace.presentation,
+            profile: profile,
+            selectedDocumentID: workspace.selectedDocumentID
+        )
+    }
+
+    private var previewAttributed: NSAttributedString {
+        ExportService.previewAttributed(
+            workspace.project,
+            presentation: workspace.presentation,
+            profile: profile,
+            selectedDocumentID: workspace.selectedDocumentID
+        )
+    }
+
+    private var readingTimeMinutes: Int {
+        max(1, Int(ceil(Double(preview.wordCount) / 225.0)))
+    }
+
+    private var estimatedPages: Int {
+        max(1, Int(ceil(Double(preview.wordCount) / 250.0)))
+    }
+
+    private var scopeSummary: String {
+        switch profile.scope {
+        case .entireManuscript:
+            let chapterCount = Set(workspace.project.documents.compactMap { ExportService.chapterTitle(for: $0, in: workspace.project) }).count
+            return "\(preview.includedDocuments.count) scenes · \(max(1, chapterCount)) chapters"
+        case .currentChapter:
+            if let activeID = workspace.selectedDocumentID,
+               let doc = workspace.project.documents.first(where: { $0.id == activeID }),
+               let ch = ExportService.chapterTitle(for: doc, in: workspace.project) {
+                return "Chapter “\(ch)” · \(preview.includedDocuments.count) scenes"
+            }
+            return "\(preview.includedDocuments.count) scenes in current chapter"
+        case .selectedScene:
+            if let activeID = workspace.selectedDocumentID,
+               let doc = workspace.project.documents.first(where: { $0.id == activeID }) {
+                return "Scene “\(doc.displayTitle)”"
+            }
+            return "1 selected scene"
+        }
     }
 
     var body: some View {
         VStack(spacing: 0) {
             Strip {
-                Text("Export")
+                Text("Export Manuscript")
                     .font(Chrome.strong)
                 Spacer(minLength: Space.small)
                 Button("Cancel") { sheet = nil }
@@ -568,29 +692,66 @@ struct ExportPanel: View {
 
             HSplitView {
                 options
-                    .frame(minWidth: 260, idealWidth: 280, maxWidth: 320)
-                summary
-                    .frame(minWidth: 300, idealWidth: 380)
+                    .frame(minWidth: 280, idealWidth: 310, maxWidth: 360)
+                mainContent
+                    .frame(minWidth: 380, idealWidth: 480)
             }
 
-            Strip(height: 38, divides: false) {
-                Text("\(preview.wordCount.formatted()) words · \(preview.includedDocuments.count) documents")
-                    .font(Chrome.small)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+            Strip(height: 42, divides: false) {
+                HStack(spacing: Space.snug) {
+                    Text("\(preview.wordCount.formatted()) words")
+                        .font(Chrome.small)
+                        .monospacedDigit()
+                    Text("·")
+                        .foregroundStyle(.secondary)
+                    Text("~\(readingTimeMinutes) min read")
+                        .font(Chrome.small)
+                        .foregroundStyle(.secondary)
+                    Text("·")
+                        .foregroundStyle(.secondary)
+                    Text("~\(estimatedPages) pages")
+                        .font(Chrome.small)
+                        .foregroundStyle(.secondary)
+                    Text("·")
+                        .foregroundStyle(.secondary)
+                    Text("\(preview.includedDocuments.count) \(preview.includedDocuments.count == 1 ? "scene" : "scenes")")
+                        .font(Chrome.small)
+                        .foregroundStyle(.secondary)
+                }
+
                 Spacer(minLength: Space.small)
+
+                Button {
+                    copyToClipboard()
+                } label: {
+                    HStack(spacing: 4) {
+                        if copiedToClipboard {
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(Palette.confirmed)
+                            Text("Copied!")
+                        } else {
+                            Image(systemName: "doc.on.doc")
+                            Text("Copy to Clipboard")
+                        }
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(preview.isEmpty)
+
                 Button("Export…") {
                     workspace.export(profile: profile)
                     sheet = nil
                 }
                 .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
                 .disabled(preview.isEmpty)
             }
             .overlay(alignment: .top) {
                 Rectangle().fill(Palette.hairline).frame(height: 1)
             }
         }
-        .frame(width: 680, height: 480)
+        .frame(minWidth: 780, idealWidth: 840, maxWidth: 960, minHeight: 520, idealHeight: 560, maxHeight: 680)
         .onAppear {
             profile.proseFace = settings.proseFace
         }
@@ -599,7 +760,24 @@ struct ExportPanel: View {
     private var options: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                PaneSection("Format", divides: false) {
+                PaneSection("Scope", divides: false) {
+                    VStack(alignment: .leading, spacing: Space.snug) {
+                        Picker("", selection: $profile.scope) {
+                            ForEach(ExportScope.allCases) { scope in
+                                Text(scope.title).tag(scope)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.segmented)
+                        .controlSize(.small)
+
+                        Text(scopeSummary)
+                            .font(Chrome.small)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                PaneSection("Format") {
                     VStack(alignment: .leading, spacing: Space.snug) {
                         Picker("", selection: $profile.format) {
                             ForEach(ExportFormat.allCases) { format in
@@ -639,13 +817,26 @@ struct ExportPanel: View {
                 }
 
                 if profile.format.isRich {
-                    PaneSection("Page") {
+                    PaneSection("Page & Typography") {
                         VStack(alignment: .leading, spacing: Space.tight) {
+                            Picker("Page size", selection: $profile.pageSize) {
+                                ForEach(PageSize.allCases) { size in
+                                    Text(size.shortTitle).tag(size)
+                                }
+                            }
+
                             Picker("Face", selection: $profile.proseFace) {
                                 ForEach(ProseFace.available) { face in
                                     Text(face.title).tag(face)
                                 }
                             }
+
+                            Toggle("Chapter on new page", isOn: $profile.chapterOnNewPage)
+
+                            if profile.format == .pdf {
+                                Toggle("Include page numbers", isOn: $profile.includesPageNumbers)
+                            }
+
                             Toggle("Double-spaced", isOn: $profile.doubleSpaced)
                         }
                         .controlSize(.small)
@@ -657,12 +848,102 @@ struct ExportPanel: View {
         }
     }
 
+    private var mainContent: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Picker("", selection: $selectedTab) {
+                    ForEach(ExportTab.allCases) { tab in
+                        Text(tab.rawValue).tag(tab)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .controlSize(.small)
+                .frame(maxWidth: 260)
+
+                Spacer()
+
+                if preview.hasConcerns {
+                    HStack(spacing: 4) {
+                        Circle().fill(Palette.caution).frame(width: 6, height: 6)
+                        Text("\(preview.omissions.count + preview.transformations.count) notice\(preview.omissions.count + preview.transformations.count == 1 ? "" : "s")")
+                            .font(Chrome.small)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .padding(.horizontal, Space.regular)
+            .padding(.vertical, Space.snug)
+            .background(Palette.subtleFill)
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(Palette.hairline).frame(height: 1)
+            }
+
+            switch selectedTab {
+            case .preview:
+                if preview.isEmpty {
+                    VStack(spacing: Space.regular) {
+                        GlyphIcon(glyph: .plainTextFile, size: 28)
+                            .foregroundStyle(.secondary)
+                        Text("No scenes match the current export settings.")
+                            .font(Chrome.body)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Palette.subtleFill)
+                } else if profile.format.isRich {
+                    ExportDocumentPreviewView(attributedText: previewAttributed)
+                } else {
+                    ScrollView {
+                        Text(previewText)
+                            .font(.system(size: 11, design: .monospaced))
+                            .lineSpacing(3)
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                            .padding(Space.regular)
+                            .textSelection(.enabled)
+                    }
+                    .background(Palette.subtleFill)
+                }
+            case .overview:
+                summary
+            }
+        }
+    }
+
     /// Nothing is written until the author has seen what will be left out.
     private var summary: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                if !includedDocuments.isEmpty {
+                    PaneSection("Included Scenes (\(includedDocuments.count))", divides: false) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(includedDocuments) { doc in
+                                HStack(spacing: Space.snug) {
+                                    if let ch = ExportService.chapterTitle(for: doc, in: workspace.project) {
+                                        Text(ch)
+                                            .font(Chrome.micro)
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 1)
+                                            .background(Palette.hairline)
+                                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Text(doc.displayTitle)
+                                        .font(Chrome.body)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Text("\(doc.wordCount)w")
+                                        .font(Chrome.small)
+                                        .foregroundStyle(.secondary)
+                                        .monospacedDigit()
+                                }
+                                .padding(.vertical, 2)
+                            }
+                        }
+                    }
+                }
+
                 if !preview.transformations.isEmpty {
-                    PaneSection("What changes", divides: false) {
+                    PaneSection("What changes", divides: includedDocuments.isEmpty ? false : true) {
                         VStack(alignment: .leading, spacing: Space.snug) {
                             ForEach(preview.transformations) { warning in
                                 WarningRow(warning: warning, tint: Palette.question)
@@ -672,7 +953,7 @@ struct ExportPanel: View {
                 }
 
                 if !preview.omissions.isEmpty {
-                    PaneSection("What will not be there", divides: preview.transformations.isEmpty ? false : true) {
+                    PaneSection("What will not be there", divides: (includedDocuments.isEmpty && preview.transformations.isEmpty) ? false : true) {
                         VStack(alignment: .leading, spacing: Space.snug) {
                             ForEach(preview.omissions) { warning in
                                 WarningRow(warning: warning, tint: Palette.caution)
@@ -696,6 +977,29 @@ struct ExportPanel: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(Palette.subtleFill)
+    }
+
+    private func copyToClipboard() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        switch profile.format {
+        case .markdown, .plainText:
+            pasteboard.setString(previewText, forType: .string)
+        case .rtf, .docx, .pdf:
+            let attr = previewAttributed
+            if let rtfData = attr.rtf(from: NSRange(location: 0, length: attr.length), documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf]) {
+                pasteboard.setData(rtfData, forType: .rtf)
+            }
+            pasteboard.setString(attr.string, forType: .string)
+        }
+        withAnimation(.easeInOut(duration: 0.15)) {
+            copiedToClipboard = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                copiedToClipboard = false
+            }
+        }
     }
 }
 

@@ -93,6 +93,17 @@ nonisolated struct StoryProject: Codable, Equatable, Sendable {
     /// The manuscript in binder order. Structural edits reorder `documents` to
     /// match, so everything downstream keeps reading a flat array.
     nonisolated mutating func applyBinderOrder() {
+        // Keep the first canonical instance of an id. This also makes recovery
+        // from older duplicate-binder bugs non-trapping: Dictionary's
+        // `uniqueKeysWithValues` would otherwise crash before reconcile could
+        // repair the outline.
+        var unique: [UUID: StoryDocument] = [:]
+        for document in documents where unique[document.id] == nil {
+            unique[document.id] = document
+        }
+        documents = documents.reduce(into: []) { result, document in
+            if unique.removeValue(forKey: document.id) != nil { result.append(document) }
+        }
         binder.reconcile(with: documents.map(\.id))
         let order = binder.documentIDs
         let byID = Dictionary(uniqueKeysWithValues: documents.map { ($0.id, $0) })
@@ -409,10 +420,10 @@ nonisolated enum DocumentStatus: String, Codable, CaseIterable, Hashable, Sendab
 
     var tint: Color {
         switch self {
-        case .outline: .secondary
-        case .draft: Palette.caution
-        case .revised: Palette.question
-        case .done: Palette.confirmed
+        case .outline: Palette.statusOutline
+        case .draft: Palette.statusDraft
+        case .revised: Palette.statusRevised
+        case .done: Palette.statusDone
         }
     }
 

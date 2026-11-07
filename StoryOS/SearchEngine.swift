@@ -178,6 +178,16 @@ nonisolated enum SearchEngine {
         let query = SearchQuery.parse(raw)
         guard !query.isEmpty else { return [] }
 
+        let documentFiltered = query.filters.contains(where: \.appliesToDocuments)
+        let entityFiltered = query.filters.contains { if case .kind = $0 { true } else { false } }
+        if documentFiltered && entityFiltered { return [] }
+        if documentFiltered {
+            return Array(documentHits(query, project).sorted { $0.score > $1.score }.prefix(limit))
+        }
+        if entityFiltered {
+            return Array(entityHits(query, project).sorted { $0.score > $1.score }.prefix(limit))
+        }
+
         var hits: [SearchHit] = []
         hits += documentHits(query, project)
         hits += threadHits(query, project)
@@ -477,7 +487,7 @@ nonisolated enum SearchEngine {
     }
 
     private static func snapshotHits(_ query: SearchQuery, _ history: [ProjectSnapshotRecord]) -> [SearchHit] {
-        guard !query.words.isEmpty else { return [] }
+        guard !query.words.isEmpty || !query.phrases.isEmpty else { return [] }
 
         return history.compactMap { snapshot in
             guard let value = fieldScore(text: snapshot.reason, query: query, weight: 18) else { return nil }

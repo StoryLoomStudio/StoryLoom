@@ -125,33 +125,33 @@ struct AppCommands: Commands {
         CommandMenu("Format") {
             Button("Strong") { workspace.toggleFormat(.strong) }
                 .keyboardShortcut("b", modifiers: .command)
-                .disabled(!isWriting)
+                .disabled(!isWriting || !workspace.editorIsFocused)
 
             Button("Emphasis") { workspace.toggleFormat(.emphasis) }
                 .keyboardShortcut("i", modifiers: .command)
-                .disabled(!isWriting)
+                .disabled(!isWriting || !workspace.editorIsFocused)
 
             Button("Highlight") { workspace.toggleHighlight() }
                 .keyboardShortcut("h", modifiers: [.command, .shift])
-                .disabled(!isWriting)
+                .disabled(!isWriting || !workspace.editorIsFocused)
 
             Button("Underline") { workspace.toggleUnderline() }
                 .keyboardShortcut("u", modifiers: .command)
-                .disabled(!isWriting)
+                .disabled(!isWriting || !workspace.editorIsFocused)
 
             Button("Strikethrough") { workspace.toggleFormat(.strikethrough) }
                 .keyboardShortcut("x", modifiers: [.command, .shift])
-                .disabled(!isWriting)
+                .disabled(!isWriting || !workspace.editorIsFocused)
 
             Divider()
 
             Button("Quote") { workspace.toggleBlockquote() }
                 .keyboardShortcut("'", modifiers: [.command, .control])
-                .disabled(!isWriting)
+                .disabled(!isWriting || !workspace.editorIsFocused)
 
             Button("Insert Scene Break") { workspace.insertSceneBreak() }
                 .keyboardShortcut("-", modifiers: [.command, .shift])
-                .disabled(!isWriting)
+                .disabled(!isWriting || !workspace.editorIsFocused)
 
             Divider()
 
@@ -165,7 +165,7 @@ struct AppCommands: Commands {
             // menu with a shortcut, not only under the right button.
             Button("Add Comment") { workspace.addComment(range: workspace.editorSelection.range) }
                 .keyboardShortcut("c", modifiers: [.command, .option])
-                .disabled(!isWriting || workspace.editorSelection.isEmpty)
+                .disabled(!isWriting || !workspace.editorIsFocused || workspace.editorSelection.isEmpty)
 
             Divider()
 
@@ -235,6 +235,7 @@ struct AppCommands: Commands {
         }
 
         CommandGroup(replacing: .help) {
+            Button("Writing in StoryLoom") { post(.guide) }
             Button("StoryLoom Project Format") { revealFormatDocumentation() }
         }
     }

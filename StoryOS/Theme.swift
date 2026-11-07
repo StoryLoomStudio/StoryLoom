@@ -471,6 +471,18 @@ nonisolated enum Palette {
     static let confirmed = Color(nsColor: .systemGreen)
     /// Deliberate ambiguity: the author has told the system to stop asking.
     static let intentional = Color(nsColor: .systemPurple)
+    /// A scene the author has been back through, but has not called finished.
+    static let revised = Color(hex: 0x7771A8)
+
+    // Editorial status palette
+    /// Stone grey: Neutral, formative, unfinished
+    static let statusOutline = Color(hex: 0x8B8B86)
+    /// Muted amber: Active, warm, work-in-progress
+    static let statusDraft   = Color(hex: 0xD98B3A)
+    /// Dusty indigo: Reflective, refined, deliberate
+    static let statusRevised = Color(hex: 0x7771A8)
+    /// Muted forest: Resolved, calm, completion
+    static let statusDone    = Color(hex: 0x4F9368)
 
     static let hairline = Color.primary.opacity(0.07)
     static let subtleFill = Color.primary.opacity(0.045)

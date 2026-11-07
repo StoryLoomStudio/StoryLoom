@@ -155,6 +155,41 @@ nonisolated extension Array where Element == BinderItem {
         return nil
     }
 
+    /// Every row an outline draws when `collapsed` groups are shut, top to
+    /// bottom.
+    ///
+    /// This is what a shift-click means by *between*. A range worked out from
+    /// the whole tree would sweep up the scenes inside a closed chapter, and the
+    /// author would then move — or trash — eleven things having seen two.
+    func visibleIDs(collapsed: Set<UUID>) -> [UUID] {
+        flatMap { item -> [UUID] in
+            guard item.isFolder, !collapsed.contains(item.id) else { return [item.id] }
+            return [item.id] + item.children.visibleIDs(collapsed: collapsed)
+        }
+    }
+
+    /// The chosen ids that are not already inside another chosen folder, in
+    /// reading order.
+    ///
+    /// Selecting a chapter *and* a scene inside it and dragging the pair is one
+    /// move, not two: the scene travels because its chapter does. Applying it
+    /// twice would lift the scene out of the chapter on the way past — the same
+    /// gesture, performed once, quietly undoing half of itself.
+    func topmost(_ ids: Set<UUID>) -> [UUID] {
+        var found: [UUID] = []
+        func walk(_ items: [BinderItem]) {
+            for item in items {
+                if ids.contains(item.id) {
+                    found.append(item.id)
+                } else {
+                    walk(item.children)
+                }
+            }
+        }
+        walk(self)
+        return found
+    }
+
     /// True when `ancestor` contains `id` at any depth. Used to refuse a drag
     /// that would put a folder inside itself — which is the one drop that turns
     /// a tree into a lost subtree.
@@ -249,6 +284,7 @@ nonisolated extension Array where Element == BinderItem {
     mutating func reconcile(with documentIDs: [UUID]) {
         let known = Set(documentIDs)
         prune(keeping: known)
+        deduplicateDocuments()
         let present = Set(self.documentIDs)
         for id in documentIDs where !present.contains(id) {
             append(.document(id))
@@ -263,5 +299,26 @@ nonisolated extension Array where Element == BinderItem {
                 remove(at: index)
             }
         }
+    }
+
+    /// A document has one position in a manuscript. Older trash restoration and
+    /// hand-edited binder files could leave the same UUID in two places; keeping
+    /// the first visible occurrence repairs that state without duplicating prose.
+    private mutating func deduplicateDocuments(seen: inout Set<UUID>) {
+        var index = startIndex
+        while index < endIndex {
+            if self[index].isFolder {
+                self[index].children.deduplicateDocuments(seen: &seen)
+            } else if !seen.insert(self[index].id).inserted {
+                remove(at: index)
+                continue
+            }
+            formIndex(after: &index)
+        }
+    }
+
+    private mutating func deduplicateDocuments() {
+        var seen = Set<UUID>()
+        deduplicateDocuments(seen: &seen)
     }
 }

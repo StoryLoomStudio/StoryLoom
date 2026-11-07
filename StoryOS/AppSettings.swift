@@ -33,9 +33,9 @@ nonisolated enum AppAppearance: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .light: "Light (Default)"
+        case .light: "Light"
         case .dark: "Dark"
-        case .system: "System"
+        case .system: "System (Default)"
         }
     }
 
@@ -65,6 +65,20 @@ nonisolated enum AppAppearance: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+nonisolated enum SpellingLanguage: String, CaseIterable, Identifiable, Sendable {
+    case britishEnglish = "en_GB"
+    case americanEnglish = "en_US"
+
+    nonisolated var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .britishEnglish: "British English"
+        case .americanEnglish: "American English"
+        }
+    }
+}
+
 @MainActor
 final class AppSettings: ObservableObject {
     static let shared = AppSettings()
@@ -81,12 +95,16 @@ final class AppSettings: ObservableObject {
 
     // Composition
     @Published var showsFormatBar: Bool { didSet { store(showsFormatBar, "showsFormatBar") } }
+    @Published var showsReadingTime: Bool { didSet { store(showsReadingTime, "showsReadingTime") } }
+    @Published var showsWordCount: Bool { didSet { store(showsWordCount, "showsWordCount") } }
+    @Published var showsTarget: Bool { didSet { store(showsTarget, "showsTarget") } }
     @Published var focusDepth: FocusDepth { didSet { store(focusDepth.rawValue, "focusDepth") } }
     @Published var typewriter: Bool { didSet { store(typewriter, "typewriter") } }
     @Published var highlightsDialogue: Bool { didSet { store(highlightsDialogue, "highlightsDialogue") } }
 
     // Text services
     @Published var checksSpelling: Bool { didSet { store(checksSpelling, "checksSpelling") } }
+    @Published var spellingLanguage: SpellingLanguage { didSet { store(spellingLanguage.rawValue, "spellingLanguage") } }
     @Published var checksGrammar: Bool { didSet { store(checksGrammar, "checksGrammar") } }
     @Published var smartQuotes: Bool { didSet { store(smartQuotes, "smartQuotes") } }
     @Published var smartDashes: Bool { didSet { store(smartDashes, "smartDashes") } }
@@ -113,15 +131,19 @@ final class AppSettings: ObservableObject {
         paragraphLayout = readEnum("paragraphLayout", ParagraphLayout.spaced)
         measure = readEnum("measure", Measure.comfortable)
         readingTheme = readEnum("readingTheme", ReadingTheme.paper)
-        appearance = readEnum("appearance", AppAppearance.light)
+        appearance = readEnum("appearance", AppAppearance.system)
         viewMode = readEnum("viewMode", PageViewMode.page)
 
         showsFormatBar = read("showsFormatBar", true)
+        showsReadingTime = read("showsReadingTime", true)
+        showsWordCount = read("showsWordCount", true)
+        showsTarget = read("showsTarget", true)
         focusDepth = readEnum("focusDepth", FocusDepth.off)
         typewriter = read("typewriter", false)
         highlightsDialogue = read("highlightsDialogue", false)
 
         checksSpelling = read("checksSpelling", true)
+        spellingLanguage = readEnum("spellingLanguage", SpellingLanguage.britishEnglish)
         checksGrammar = read("checksGrammar", false)
         smartQuotes = read("smartQuotes", true)
         smartDashes = read("smartDashes", true)

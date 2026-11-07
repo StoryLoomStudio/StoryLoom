@@ -44,19 +44,79 @@ extension BinderMenuEntry {
     /// it here makes the AppKit menu just as current as the old SwiftUI `Menu`:
     /// it is evaluated when the author opens the context menu, not when the
     /// binder last rendered.
-    static func moveTo(_ id: UUID, in workspace: WorkspaceModel) -> BinderMenuEntry {
-        .submenu(
-            "Move To",
-            [
-                .item("Manuscript") { workspace.moveBinderItem(id, into: nil, at: nil) },
-                .separator,
-            ] + workspace.groupDestinations.map { destination in
-                .item(
-                    String(repeating: "   ", count: destination.depth) + destination.item.displayName,
-                    isEnabled: destination.id != id && !workspace.project.binder.contains(destination.id, under: id)
-                ) { workspace.moveBinderItem(id, into: destination.id, at: nil) }
+    static func moveTo(_ ids: [UUID], in workspace: WorkspaceModel) -> BinderMenuEntry {
+        let moving = Set(ids)
+        var entries: [BinderMenuEntry] = [
+            .item("Manuscript") { workspace.moveBinderItems(ids, into: nil, at: nil) },
+            .separator,
+        ]
+        for destination in workspace.groupDestinations {
+            let indent = String(repeating: "   ", count: destination.depth)
+            // A group cannot be moved into itself or into anything it contains,
+            // and with several selected it takes only one of them to rule a
+            // destination out.
+            let swallowsItsOwn = ids.contains { id in
+                workspace.project.binder.contains(destination.id, under: id)
             }
-        )
+            entries.append(
+                .item(
+                    indent + destination.item.displayName,
+                    isEnabled: !moving.contains(destination.id) && !swallowsItsOwn
+                ) { workspace.moveBinderItems(ids, into: destination.id, at: nil) }
+            )
+        }
+        return .submenu("Move To", entries)
+    }
+
+    static func moveTo(_ id: UUID, in workspace: WorkspaceModel) -> BinderMenuEntry {
+        moveTo([id], in: workspace)
+    }
+}
+
+@MainActor
+extension Array where Element == BinderMenuEntry {
+    /// The menu for a selection of several rows.
+    ///
+    /// It offers what the single-row menus offer and nothing new: the same four
+    /// verbs, aimed at everything highlighted. Rename is the one that cannot
+    /// come along — six rows have six names — and it is the one an author would
+    /// not have reached for anyway.
+    ///
+    /// The counted titles are deliberate. "Move to Trash" under a right-click
+    /// that happened to land inside a selection reads as being about the row
+    /// beneath the pointer; "Move 6 Items to Trash" cannot be misread.
+    static func selection(in workspace: WorkspaceModel) -> [BinderMenuEntry] {
+        let ids = workspace.binderSelectionRoots
+        guard !ids.isEmpty else { return [] }
+
+        let scenes = ids.filter { workspace.project.document($0) != nil }
+        let groups = ids.filter { workspace.project.binder.find($0)?.isFolder == true }
+        // A chapter and a scene inside it are two selected rows and one thing to
+        // act on, so the count comes from what will actually move — and when
+        // that collapses to one, the titles read as the single-row menu's do.
+        let counted = ids.count == 1 ? "" : " \(ids.count) Items"
+
+        var entries: [BinderMenuEntry] = [
+            .item("Duplicate" + counted) { workspace.duplicateBinderItems(ids) },
+            .moveTo(ids, in: workspace),
+        ]
+
+        if !scenes.isEmpty {
+            entries.append(.submenu("Change Status", DocumentStatus.allCases.map { status in
+                .item(status.title) { workspace.setStatus(status, for: scenes) }
+            }))
+        }
+        if !groups.isEmpty {
+            entries.append(.submenu("Change Type", GroupKind.allCases.map { kind in
+                .item(kind.title) { workspace.changeGroupType(groups, to: kind) }
+            }))
+        }
+
+        entries.append(.separator)
+        entries.append(.destructive("Move" + counted + " to Trash") {
+            workspace.trashBinderItems(ids)
+        })
+        return entries
     }
 }
 
@@ -96,8 +156,14 @@ enum BinderMenu {
             return item
 
         case let .destructive(title, action):
-            let item = NSMenuItem()
-            item.view = DestructiveMenuItemView(title: title, action: action)
+            let item = NSMenuItem(title: title, action: #selector(MenuAction.fire), keyEquivalent: "")
+            let handler = MenuAction(action)
+            item.target = handler
+            item.representedObject = handler
+            item.attributedTitle = NSAttributedString(
+                string: title,
+                attributes: [.foregroundColor: NSColor.systemRed]
+            )
             return item
         }
     }
@@ -115,147 +181,98 @@ private final class MenuAction: NSObject {
     @objc func fire() { action() }
 }
 
-// MARK: - The destructive row
-
-/// A menu row that paints itself, so it can be red on grey.
-///
-/// Everything AppKit does for an ordinary item — the highlight, the click, the
-/// text — a view-based item owes itself. That is the price of the one thing it
-/// buys: a highlight colour of its own.
-private final class DestructiveMenuItemView: NSView {
-    private let title: String
-    private let action: () -> Void
-    private var tracking: NSTrackingArea?
-
-    /// The system highlight is inset from the menu's edges and rounded; these
-    /// match it so the grey lands where the blue would have.
-    private static let inset: CGFloat = 5
-    private static let radius: CGFloat = 4
-    private static let rowHeight: CGFloat = 22
-    /// Where AppKit starts an item's title when nothing in the menu has a
-    /// checkmark or an image. Not a queryable metric — if this row's text ever
-    /// looks a pixel out against Rename above it, this is the number to nudge.
-    private static let titleInset: CGFloat = 14
-
-    init(title: String, action: @escaping () -> Void) {
-        self.title = title
-        self.action = action
-        super.init(frame: NSRect(x: 0, y: 0, width: 0, height: Self.rowHeight))
-        // The menu is as wide as its widest row, and this row has to be able to
-        // ask for width like the others — then stretch to whatever the menu
-        // settles on, so the highlight spans it.
-        autoresizingMask = [.width]
-        frame.size = intrinsicContentSize
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-
-    private var attributes: [NSAttributedString.Key: Any] {
-        [.font: NSFont.menuFont(ofSize: 0), .foregroundColor: NSColor.systemRed]
-    }
-
-    override var intrinsicContentSize: NSSize {
-        let text = (title as NSString).size(withAttributes: attributes)
-        return NSSize(width: Self.titleInset * 2 + text.width, height: Self.rowHeight)
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        if enclosingMenuItem?.isHighlighted == true {
-            // The grey macOS itself uses for a selection that hasn't got focus —
-            // muted by construction, and it follows light and dark without being
-            // told.
-            NSColor.unemphasizedSelectedContentBackgroundColor.setFill()
-            NSBezierPath(
-                roundedRect: bounds.insetBy(dx: Self.inset, dy: 0),
-                xRadius: Self.radius,
-                yRadius: Self.radius
-            ).fill()
-        }
-
-        let text = title as NSString
-        let size = text.size(withAttributes: attributes)
-        text.draw(
-            at: NSPoint(x: Self.titleInset, y: (bounds.height - size.height) / 2),
-            withAttributes: attributes
-        )
-    }
-
-    override func mouseUp(with event: NSEvent) {
-        enclosingMenuItem?.menu?.cancelTracking()
-        // After the menu is gone, not during. Deleting the selected scene moves
-        // focus, and doing that inside a live menu-tracking loop is how a rename
-        // field ends up opening behind a menu that hasn't closed yet.
-        DispatchQueue.main.async { [action] in action() }
-    }
-
-    // `isHighlighted` is the truth about hover, and it changes without telling
-    // the view to redraw. This is what asks.
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        if let tracking { removeTrackingArea(tracking) }
-        let area = NSTrackingArea(
-            rect: bounds,
-            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
-            owner: self
-        )
-        addTrackingArea(area)
-        tracking = area
-    }
-
-    override func mouseEntered(with event: NSEvent) { needsDisplay = true }
-    override func mouseExited(with event: NSEvent) { needsDisplay = true }
-}
-
 // MARK: - Attaching one to a row
 
 extension View {
-    /// Right-click opens `entries`, built at the moment of the click.
+    /// The mouse handling a binder row has to do in AppKit rather than SwiftUI.
     ///
-    /// Late is the point: `Move To` lists the folders that exist now, and
-    /// `Change Status` greys the status the scene is already at.
-    func binderContextMenu(
-        onOpen: @escaping () -> Void = {},
-        entries: @escaping () -> [BinderMenuEntry]
-    ) -> some View {
-        overlay(BinderContextMenu(onOpen: onOpen, entries: entries))
+    /// Two clicks never reach SwiftUI here. A right-click, because the menu it
+    /// opens has a row that paints itself — that is the whole story above. And a
+    /// ⌘- or ⇧-click, because `List` answers those with its own idea of multiple
+    /// selection at the same instant the workspace answers with the outline's:
+    /// two handlers, one click, and a ⌘-click that adds a row and takes it
+    /// straight back out again. Catching the event here means exactly one of
+    /// them ever sees it.
+    ///
+    /// `entries` is called at the moment of the click, and late is the point:
+    /// `Move To` lists the folders that exist now, and a menu opened inside a
+    /// selection of several is a different menu.
+    func binderRowMouse(id: UUID, entries: @escaping () -> [BinderMenuEntry]) -> some View {
+        modifier(BinderRowMouse(id: id, entries: entries))
     }
 }
 
-private struct BinderContextMenu: NSViewRepresentable {
-    let onOpen: () -> Void
+private struct BinderRowMouse: ViewModifier {
+    let id: UUID
     let entries: () -> [BinderMenuEntry]
 
-    func makeNSView(context: Context) -> RightClickCatcher {
-        let view = RightClickCatcher()
-        view.onOpen = onOpen
-        view.entries = entries
+    @EnvironmentObject private var workspace: WorkspaceModel
+    @Environment(\.binderVisibleOrder) private var order
+
+    func body(content: Content) -> some View {
+        content.overlay(
+            BinderRowMouseCatcher(
+                onMenu: {
+                    workspace.presentBinderMenu(for: id)
+                    return BinderMenu.build(entries())
+                },
+                onModifierClick: { modifiers in
+                    workspace.clickBinderRow(id, modifiers: modifiers, in: order)
+                }
+            )
+        )
+    }
+}
+
+private struct BinderRowMouseCatcher: NSViewRepresentable {
+    let onMenu: () -> NSMenu
+    let onModifierClick: (NSEvent.ModifierFlags) -> Void
+
+    func makeNSView(context: Context) -> RowMouseCatcher {
+        let view = RowMouseCatcher()
+        view.onMenu = onMenu
+        view.onModifierClick = onModifierClick
         return view
     }
 
-    func updateNSView(_ view: RightClickCatcher, context: Context) {
-        view.onOpen = onOpen
-        view.entries = entries
+    func updateNSView(_ view: RowMouseCatcher, context: Context) {
+        view.onMenu = onMenu
+        view.onModifierClick = onModifierClick
     }
 }
 
-/// Sits over a binder row and is invisible to everything except a right-click.
+/// Sits over a binder row and is invisible to everything except the clicks it
+/// is there for.
 ///
-/// It has to be on top to see the click before the row does, and a view on top
-/// of a row that also took left-clicks would cost the row its selection, its
-/// drag, and the double-click that starts a rename. So it takes the two events
-/// that open a menu and declines every other one by failing hit-testing.
-private final class RightClickCatcher: NSView {
-    var onOpen: (() -> Void)?
-    var entries: (() -> [BinderMenuEntry])?
+/// It has to be on top to see a click before the row does, and a view on top of
+/// a row that took *every* left-click would cost the row its selection, its
+/// drag, and the double-click that starts a rename. So it takes the clicks that
+/// open a menu or change a multiple selection, and declines every other one by
+/// failing hit-testing — a plain click goes to the row exactly as before.
+private final class RowMouseCatcher: NSView {
+    var onMenu: (() -> NSMenu)?
+    var onModifierClick: ((NSEvent.ModifierFlags) -> Void)?
+
+    /// The modifiers this view answers for. Control is not among them: AppKit
+    /// turns a control-click into `menu(for:)` by itself, and taking the event
+    /// first would stop it doing so.
+    private static let claimed: NSEvent.ModifierFlags = [.command, .shift]
 
     override func menu(for event: NSEvent) -> NSMenu? {
-        guard let entries else { return nil }
         // Right-clicking a row selects it, the way it did when SwiftUI owned
         // this menu — a menu that names one chapter should not float over
         // another one that stayed highlighted.
-        onOpen?()
-        return BinderMenu.build(entries())
+        onMenu?()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        let modifiers = event.modifierFlags
+        guard !modifiers.contains(.control) else {
+            // Left to AppKit, which opens the context menu from it.
+            super.mouseDown(with: event)
+            return
+        }
+        onModifierClick?(modifiers)
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
@@ -264,7 +281,9 @@ private final class RightClickCatcher: NSView {
         case .rightMouseDown, .rightMouseUp:
             return super.hitTest(point)
         case .leftMouseDown, .leftMouseUp:
-            return event.modifierFlags.contains(.control) ? super.hitTest(point) : nil
+            let modifiers = event.modifierFlags
+            guard modifiers.contains(.control) || !modifiers.isDisjoint(with: Self.claimed) else { return nil }
+            return super.hitTest(point)
         default:
             return nil
         }

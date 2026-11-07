@@ -152,13 +152,19 @@ private struct CompositionSettings: View {
 
             Section {
                 Toggle("Check spelling", isOn: $settings.checksSpelling)
+                Picker("Spelling language", selection: $settings.spellingLanguage) {
+                    ForEach(SpellingLanguage.allCases) { language in
+                        Text(language.title).tag(language)
+                    }
+                }
+                .disabled(!settings.checksSpelling)
                 Toggle("Check grammar", isOn: $settings.checksGrammar)
                 Toggle("Smart quotes", isOn: $settings.smartQuotes)
                 Toggle("Smart dashes", isOn: $settings.smartDashes)
             } header: {
                 Text("Text")
             } footer: {
-                Text("Autocorrect is never on. A novelist invents words, and a tool that quietly fixes them is working against the book.")
+                Text("Spelling uses the selected English dictionary. Autocorrect is never on; a novelist invents words, and a tool that quietly fixes them is working against the book.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }

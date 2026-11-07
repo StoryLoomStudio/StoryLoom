@@ -383,6 +383,7 @@ struct QuietText: View {
     @Binding var text: String
     var size: CGFloat = 12
     var minimumLines = 1
+    var accessibilityLabel: String? = nil
 
     @State private var focused = false
     @State private var hovering = false
@@ -402,6 +403,7 @@ struct QuietText: View {
             .onHover { hovering = $0 }
             .animation(.easeOut(duration: 0.1), value: focused)
             .animation(.easeOut(duration: 0.1), value: hovering)
+            .accessibilityLabel(accessibilityLabel ?? placeholder)
     }
 }
 
@@ -549,7 +551,7 @@ struct FilterField: View {
         }
         .padding(.horizontal, Space.snug)
         .frame(height: 19)
-        .background(Palette.subtleFill, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+        .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
                 .strokeBorder(Palette.hairline, lineWidth: 1)

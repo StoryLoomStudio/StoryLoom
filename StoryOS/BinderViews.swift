@@ -51,7 +51,18 @@ struct BinderOutline: View {
     /// the sum of its descendants, and walking back into the project for every
     /// row would be quadratic on a long book.
     private var counts: [UUID: Int] {
-        Dictionary(uniqueKeysWithValues: workspace.project.documents.map { ($0.id, $0.wordCount) })
+        Dictionary(uniqueKeysWithValues: workspace.project.documents.map {
+            ($0.id, workspace.wordCount(of: $0))
+        })
+    }
+
+    /// Every row on screen, top to bottom.
+    ///
+    /// Only the outline can work this out: the tree arriving here has already
+    /// been filtered, and closed groups are keeping their children off screen.
+    /// A shift-click asks what lies *between* two rows, and this is the answer.
+    private var order: [UUID] {
+        items.visibleIDs(collapsed: workspace.collapsedBinderIDs)
     }
 
     var body: some View {
@@ -85,21 +96,24 @@ struct BinderOutline: View {
         }
         .listStyle(.sidebar)
         .denseList()
+        .environment(\.binderVisibleOrder, order)
         // The navigator is a high-density outline. Its position is already
         // evident from the visible tree, so a persistent wide scroller is noise;
         // scrolling still works normally with the mouse, trackpad, and keyboard.
         .scrollIndicators(.hidden)
         // Return renames whatever is selected — the shortcut every Mac outline
         // has had since the Finder. It lives on the List because an unfocused
-        // row never sees the key.
+        // row never sees the key. Several rows selected means there is no one
+        // name being asked for, so the key falls through untouched.
         .onKeyPress(.return) {
-            guard let id = workspace.selectedBinderID else { return .ignored }
+            guard workspace.selectedBinderIDs.count == 1,
+                  let id = workspace.selectedBinderIDs.first else { return .ignored }
             workspace.renamingBinderID = id
             return .handled
         }
     }
 
-    /// One selection for both kinds of row.
+    /// One selection for both kinds of row, and as many rows as the author wants.
     ///
     /// A folder is a row an author clicks — to rename it, to make a scene inside
     /// it, to see it highlighted while they drag something at it — and until now
@@ -107,11 +121,33 @@ struct BinderOutline: View {
     /// binding routes through the workspace rather than at `selectedDocumentID`
     /// directly because selecting a folder must *not* change which scene is open:
     /// collapsing the book's shape is not a request to stop editing.
-    private var selection: Binding<UUID?> {
+    ///
+    /// A `Set` binding is also what buys the highlight for a selection of
+    /// several — the focus ring, the grey when the window goes inactive, the
+    /// system accent — from the same `List` that was already drawing one.
+    private var selection: Binding<Set<UUID>> {
         Binding(
-            get: { workspace.selectedBinderID },
-            set: { workspace.selectBinderRow($0) }
+            get: { workspace.selectedBinderIDs },
+            set: { workspace.selectBinderRows($0) }
         )
+    }
+}
+
+/// The rows the outline is drawing, in order.
+///
+/// It travels by environment because the thing that needs it is furthest from
+/// the thing that knows it: a shift-click is caught by an AppKit view sitting on
+/// one row, and that row has no idea what is above or below it. Threading the
+/// list through four initialisers to reach it would put a parameter about
+/// selection on every drawing type in the file.
+private struct BinderVisibleOrder: EnvironmentKey {
+    nonisolated static let defaultValue: [UUID] = []
+}
+
+nonisolated extension EnvironmentValues {
+    var binderVisibleOrder: [UUID] {
+        get { self[BinderVisibleOrder.self] }
+        set { self[BinderVisibleOrder.self] = newValue }
     }
 }
 
@@ -147,8 +183,25 @@ private struct GroupRow: View {
     @Binding var drop: DropTarget?
 
     @EnvironmentObject private var workspace: WorkspaceModel
-    @State private var isExpanded = true
     @State private var height: CGFloat = 0
+
+    /// Held on the workspace, not here: see `collapsedBinderIDs`.
+    private var isExpanded: Bool { workspace.isBinderGroupExpanded(item.id) }
+
+    private var font: Font {
+        switch item.group {
+        case .volume: return Chrome.strong
+        default: return Chrome.body
+        }
+    }
+
+    private var topMargin: CGFloat {
+        switch item.group {
+        case .volume: return Space.large
+        case .chapter: return Space.snug
+        default: return 0
+        }
+    }
 
     var body: some View {
         row
@@ -162,8 +215,17 @@ private struct GroupRow: View {
             // The chevron has its own comfortable hit target. Selecting its
             // group still leaves the scene on screen alone, so collapsing a
             // part to see the shape of the book never interrupts writing.
+            //
+            // No `withAnimation`. It used to wrap a `@State` toggle, which was
+            // local and correctly scoped; the same call now wraps a publish on
+            // the workspace, and a transaction animation applies to *everything*
+            // that redraws with it — the editor, the inspector, the status bar.
+            // A Volume with fifty descendants underneath it is also the worst
+            // case for animating a batch of row removals, which is exactly where
+            // this looked like a toggle that did not work. Instant is what the
+            // Finder and Xcode's navigator do anyway.
             Button {
-                withAnimation(.easeOut(duration: 0.12)) { isExpanded.toggle() }
+                workspace.toggleBinderGroup(item.id)
             } label: {
                 GlyphIcon(glyph: isExpanded ? .chevronDown : .chevronRight, size: Icon.chevron)
                     .foregroundStyle(.secondary)
@@ -171,11 +233,13 @@ private struct GroupRow: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(isExpanded ? "Collapse \(item.displayName)" : "Expand \(item.displayName)")
+            .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
 
             GlyphIcon(glyph: item.group.glyph, size: Icon.folder)
                 .foregroundStyle(.secondary)
 
-            BinderName(id: item.id, text: item.displayName, font: Chrome.textStrong)
+            BinderName(id: item.id, text: item.displayName, font: font)
 
             Spacer(minLength: Space.small)
 
@@ -187,6 +251,7 @@ private struct GroupRow: View {
         // on the complete row; a drag still wins over a tap, and a double-click
         // still arrives at the rename gesture below.
         .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading)
+        .padding(.top, topMargin)
         .padding(.leading, CGFloat(depth) * Outline.indent)
         .tag(item.id)
         .binderRow(
@@ -196,11 +261,11 @@ private struct GroupRow: View {
             drop: $drop,
             workspace: workspace
         )
-        .binderContextMenu(onOpen: { workspace.selectBinderRow(item.id) }) { menu }
+        .binderRowMouse(id: item.id) { menu }
         // A folder that is dropped on while collapsed opens, so the author can
         // see where the thing they just dragged has landed.
         .onChange(of: drop) { _, target in
-            if target == DropTarget(id: item.id, edge: .inside) { isExpanded = true }
+            if target == DropTarget(id: item.id, edge: .inside) { workspace.expandBinderGroup(item.id) }
         }
         .renameOnDoubleClick(id: item.id, workspace: workspace)
     }
@@ -210,7 +275,11 @@ private struct GroupRow: View {
     }
 
     private var menu: [BinderMenuEntry] {
-        [
+        // A menu opened inside a selection of several is about all of them.
+        if workspace.isBinderSelectionMultiple(containing: item.id) {
+            return .selection(in: workspace)
+        }
+        return [
             .item("New Scene") { workspace.createScene(inFolder: item.id) },
             .submenu("New Group", GroupKind.allCases.map { kind in
                 .item(kind.title) { workspace.createGroup(kind, inside: item.id) }
@@ -250,9 +319,14 @@ private struct SceneBinderRow: View {
             // instead of stepping in and out with whatever has children.
             Color.clear.frame(width: Outline.chevronColumn, height: 1)
 
-            StatusDot(color: document.status.tint)
+            // Hollow for a scene that is only an outline, as everywhere else the
+            // dot is drawn. The binder was the one place passing colour alone,
+            // so the status scale was a shade short of a distinction here.
+            StatusDot(color: document.status.tint, filled: document.status.isFilled)
+                .accessibilityHidden(true)
 
             BinderName(id: document.id, text: document.displayTitle, font: Chrome.body)
+                .foregroundStyle(.secondary)
 
             Spacer(minLength: Space.small)
 
@@ -262,10 +336,15 @@ private struct SceneBinderRow: View {
                     .help("Lands a thread")
             }
 
-            CountLabel(document.wordCount)
+            CountLabel(workspace.wordCount(of: document))
         }
         .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading)
-        .padding(.leading, CGFloat(depth) * Outline.indent)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            "\(document.displayTitle), \(document.status.title), \(workspace.wordCount(of: document)) words"
+            + (document.landsThreadIDs.isEmpty ? "" : ", lands a thread")
+        )
+        .padding(.leading, CGFloat(depth) * Outline.indent + Space.medium)
         .tag(document.id)
         .binderRow(
             id: document.id,
@@ -274,12 +353,15 @@ private struct SceneBinderRow: View {
             drop: $drop,
             workspace: workspace
         )
-        .binderContextMenu(onOpen: { workspace.selectBinderRow(document.id) }) { menu }
+        .binderRowMouse(id: document.id) { menu }
         .renameOnDoubleClick(id: document.id, workspace: workspace)
     }
 
     private var menu: [BinderMenuEntry] {
-        [
+        if workspace.isBinderSelectionMultiple(containing: document.id) {
+            return .selection(in: workspace)
+        }
+        return [
             .item("Rename") { workspace.renamingBinderID = document.id },
             .item("Duplicate") { workspace.duplicate(document) },
             .moveTo(document.id, in: workspace),
@@ -373,24 +455,24 @@ nonisolated struct DropTarget: Equatable, Sendable {
     let edge: Edge
 }
 
-/// What travels on the pasteboard: an id, and nothing else.
+/// What travels on the pasteboard: ids, and nothing else.
 ///
-/// Deliberately not the item. A drag carrying a copy of the subtree can be
+/// Deliberately not the items. A drag carrying a copy of the subtree can be
 /// dropped after the tree has moved on underneath it and put a stale branch
 /// back; an id can only ever move the thing that is actually there.
 ///
-/// The id is also held on the workspace for the length of the drag, and *that*
-/// is what a drop reads. Pulling it off the provider means an asynchronous load
-/// on the way in, so the row under the pointer cannot say whether it would
+/// The ids are also held on the workspace for the length of the drag, and *that*
+/// is what a drop reads. Pulling them off the provider means an asynchronous
+/// load on the way in, so the row under the pointer cannot say whether it would
 /// accept the thing being dragged until after the author has let go — which is
 /// how a drag ends up with no indicator and a drop that does nothing.
 nonisolated struct BinderDrag: Sendable {
-    static func provider(for id: UUID) -> NSItemProvider {
+    static func provider(for ids: [UUID]) -> NSItemProvider {
         let provider = NSItemProvider()
         // `.ownProcess`: this identifier means nothing outside StoryLoom, and a
         // row dragged onto the Desktop should not leave a file behind.
         provider.registerDataRepresentation(for: .storyLoomBinderItem, visibility: .ownProcess) { completion in
-            completion(Data(id.uuidString.utf8), nil)
+            completion(Data(ids.map(\.uuidString).joined(separator: "\n").utf8), nil)
             return nil
         }
         return provider
@@ -424,10 +506,11 @@ private extension View {
                 TapGesture().onEnded { workspace.selectBinderRow(id) }
             )
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height.wrappedValue = $0 }
-            .onDrag {
-                workspace.draggingBinderID = id
-                return BinderDrag.provider(for: id)
-            }
+            // Dragging a row that is part of a selection drags the selection.
+            // `List` leaves a click on an already-selected row alone until the
+            // mouse comes back up, precisely so this gesture can mean the set
+            // rather than the one row under the pointer.
+            .onDrag { BinderDrag.provider(for: workspace.beginBinderDrag(from: id)) }
             .onDrop(
                 of: [.storyLoomBinderItem],
                 delegate: BinderRowDrop(
@@ -521,7 +604,7 @@ private struct BinderRowDrop: DropDelegate {
     @Binding var drop: DropTarget?
     let workspace: WorkspaceModel
 
-    func validateDrop(info: DropInfo) -> Bool { dragged != nil }
+    func validateDrop(info: DropInfo) -> Bool { !dragged.isEmpty }
 
     func dropEntered(info: DropInfo) {
         drop = target(at: info.location)
@@ -537,26 +620,29 @@ private struct BinderRowDrop: DropDelegate {
     }
 
     func performDrop(info: DropInfo) -> Bool {
-        guard let dragged, let target = target(at: info.location) else { return false }
+        let dragged = self.dragged
+        guard !dragged.isEmpty, let target = target(at: info.location) else { return false }
         drop = nil
-        workspace.draggingBinderID = nil
+        workspace.endBinderDrag()
 
         switch target.edge {
-        case .inside: return workspace.moveBinderItem(dragged, into: id, at: nil)
-        case .above: return workspace.moveBinderItem(dragged, beside: id, below: false)
-        case .below: return workspace.moveBinderItem(dragged, beside: id, below: true)
+        case .inside: return workspace.moveBinderItems(dragged, into: id, at: nil)
+        case .above: return workspace.moveBinderItems(dragged, beside: id, below: false)
+        case .below: return workspace.moveBinderItems(dragged, beside: id, below: true)
         }
     }
 
-    private var dragged: UUID? { workspace.draggingBinderID }
+    private var dragged: [UUID] { workspace.draggingBinderIDs }
 
     /// Nil when the drop would be refused, so the indicator never promises a
     /// move that `WorkspaceModel` is about to turn down.
     private func target(at point: CGPoint) -> DropTarget? {
-        guard let dragged, dragged != id else { return nil }
+        let dragged = self.dragged
+        guard !dragged.isEmpty, !dragged.contains(id) else { return nil }
         // A folder cannot be dropped into its own subtree: the branch would come
-        // away from the root and take half a book with it.
-        if workspace.project.binder.contains(id, under: dragged) { return nil }
+        // away from the root and take half a book with it. With several in
+        // flight it takes only one of them to be an ancestor of the target.
+        if dragged.contains(where: { workspace.project.binder.contains(id, under: $0) }) { return nil }
 
         let span = max(height, 1)
         guard acceptsInside else {
@@ -596,7 +682,7 @@ private struct BinderTailDrop: View {
         @Binding var isTargeted: Bool
         let workspace: WorkspaceModel
 
-        func validateDrop(info: DropInfo) -> Bool { workspace.draggingBinderID != nil }
+        func validateDrop(info: DropInfo) -> Bool { !workspace.draggingBinderIDs.isEmpty }
         func dropEntered(info: DropInfo) { isTargeted = true }
         func dropExited(info: DropInfo) { isTargeted = false }
 
@@ -605,10 +691,11 @@ private struct BinderTailDrop: View {
         }
 
         func performDrop(info: DropInfo) -> Bool {
-            guard let dragged = workspace.draggingBinderID else { return false }
+            let dragged = workspace.draggingBinderIDs
+            guard !dragged.isEmpty else { return false }
             isTargeted = false
-            workspace.draggingBinderID = nil
-            return workspace.moveBinderItem(dragged, into: nil, at: nil)
+            workspace.endBinderDrag()
+            return workspace.moveBinderItems(dragged, into: nil, at: nil)
         }
     }
 }

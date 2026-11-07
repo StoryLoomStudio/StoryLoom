@@ -35,15 +35,44 @@ final class WorkspaceModel: ObservableObject {
     /// outline's selection with it, or the author is looking at a highlighted
     /// row that is not the page in front of them.
     @Published var selectedDocumentID: StoryDocument.ID? {
-        didSet { if selectedDocumentID != nil { selectedBinderID = selectedDocumentID } }
+        didSet {
+            // The scene that opens becomes the binder's selection — unless it is
+            // already part of one. Clicking the third of five selected scenes
+            // must not throw the other four away; the author assembled that set
+            // in order to do something to all of it.
+            guard let id = selectedDocumentID, !selectedBinderIDs.contains(id) else { return }
+            selectedBinderIDs = [id]
+            binderAnchorID = id
+        }
     }
-    /// Which *row* of the binder is selected — a scene or a folder.
+    /// Which *rows* of the binder are selected — scenes, folders, or a mix.
     ///
     /// Separate from `selectedDocumentID` because a folder is a legitimate thing
     /// to have selected and not a thing that can be edited. Clicking a chapter
     /// highlights it, aims Rename and New Scene at it, and leaves the scene on
     /// screen exactly where it was.
-    @Published var selectedBinderID: UUID?
+    ///
+    /// A set rather than one id because everything an author does to a chapter
+    /// they eventually want to do to four of them — move them under a new Part,
+    /// mark a morning's work Revised, throw a false start away — and doing it
+    /// one row at a time is not the same offer.
+    @Published var selectedBinderIDs: Set<UUID> = []
+
+    /// The row a shift-click measures from: the last one clicked without a
+    /// modifier. Extending a range twice extends it from the same place both
+    /// times, which is the only behaviour that lets an author overshoot and
+    /// correct rather than start again.
+    @Published var binderAnchorID: UUID?
+
+    /// Which groups are shut.
+    ///
+    /// Held on the workspace rather than in the row that draws the chevron: row
+    /// state is thrown away whenever the outline is rebuilt, so a chapter closed
+    /// to see the shape of the book sprang open again on the next rename, drag,
+    /// or word typed in the scene below it. It also makes the order of the rows
+    /// on screen something more than the rows themselves can know.
+    @Published var collapsedBinderIDs: Set<UUID> = []
+
     @Published var selectedThreadID: StoryThread.ID?
     @Published var selectedEntityID: StoryEntity.ID?
     @Published var selectedEventID: StoryEvent.ID?
@@ -54,6 +83,7 @@ final class WorkspaceModel: ObservableObject {
     // MARK: Editor surface
 
     @Published var editorSelection = EditorSelection()
+    @Published var editorIsFocused = false
     @Published var reveal: RevealRequest?
     @Published var editorCommand: EditorCommandRequest?
     /// Appearance that is not text, per document. Held beside the manuscript
@@ -86,6 +116,7 @@ final class WorkspaceModel: ObservableObject {
     @Published var error: WorkspaceError?
     @Published var externalChange: ExternalChange?
     @Published var recoveryNotice: String?
+    @Published private(set) var isRestoringSnapshot = false
 
     /// The window's undo manager, so structural edits land on the same stack as
     /// typing and ⌘Z means what the author expects it to mean.
@@ -98,6 +129,16 @@ final class WorkspaceModel: ObservableObject {
     private var securityScopedURL: URL?
     private var lastSnapshotAt: Date?
     private var fingerprint: String?
+    /// The last state known to be on disk. External AI writes are merged against
+    /// this base, so a disk-only edit can be accepted automatically while a
+    /// simultaneous edit in both places is surfaced instead of guessed at.
+    private var lastSyncedProject: StoryProject?
+    private var lastSyncedPresentation: [UUID: PresentationLayer] = [:]
+    private var externalSync: Task<Void, Never>?
+    private var saveInFlight = false
+    private var saveAgain = false
+    private var openGeneration: UInt64 = 0
+    private var derivedGeneration: UInt64 = 0
     private var sessionBaseline: Int
     private var folderWatch: [DispatchSourceFileSystemObject] = []
     private var folderSettle: Task<Void, Never>?
@@ -106,6 +147,10 @@ final class WorkspaceModel: ObservableObject {
     /// until then, so a crash before that save leaves the author's file exactly
     /// where they put it.
     private var pendingAdoptions: Set<String> = []
+    /// The directories the last load read the outline out of. Handed to the
+    /// next save, which is then allowed to tidy away the ones it has rewritten
+    /// under numbered names — and only those. See `ProjectLoad.directories`.
+    private var pendingDirectories: Set<String> = []
 
     init(
         project: StoryProject? = nil,
@@ -119,6 +164,7 @@ final class WorkspaceModel: ObservableObject {
         self.hasProject = project != nil
         self.selectedDocumentID = opened.documents.first?.id
         self.sessionBaseline = opened.totalWordCount
+        self.lastSyncedProject = project
         selectFirstRecords()
         rebuildDerived()
     }
@@ -172,7 +218,44 @@ final class WorkspaceModel: ObservableObject {
     /// Words written since the project was opened. Not a goal, not a streak, not
     /// a ring — just a number, for the author who wants one.
     var sessionWords: Int {
-        max(0, project.totalWordCount - sessionBaseline)
+        max(0, totalWordCount - sessionBaseline)
+    }
+
+    // MARK: Word counts
+
+    /// Counted words, remembered per scene.
+    ///
+    /// `StoryDocument.wordCount` splits the entire text every time it is asked,
+    /// and it is asked constantly: the binder wants a number for every scene in
+    /// the book on every redraw, the status bar wants the book's total twice,
+    /// the navigator header wants it again. A redraw happens on every keystroke
+    /// and every scene switch, so a 300,000-word manuscript was being split four
+    /// or five times over — measured at 103ms of main-thread work per pass,
+    /// which is exactly the pause an author feels moving between scenes, and
+    /// long enough that a click on a chevron looks like it did nothing.
+    ///
+    /// The memo keeps the text it counted rather than a hash or a length. A
+    /// string compared against itself returns on storage identity, so the steady
+    /// state is a dictionary lookup and only the scene actually typed into is
+    /// recounted. Keeping the text is also what makes it *correct*: a
+    /// same-length edit — "a b" becoming "a-b" — changes the count, and a length
+    /// or byte-count key would miss it.
+    private var countedWords: [UUID: (text: String, words: Int)] = [:]
+
+    func wordCount(of document: StoryDocument) -> Int {
+        if let counted = countedWords[document.id], counted.text == document.text {
+            return counted.words
+        }
+        let words = document.wordCount
+        countedWords[document.id] = (document.text, words)
+        return words
+    }
+
+    /// The manuscript's length, from the memo rather than from a fresh split of
+    /// every scene in the book. Prefer this to `project.totalWordCount` anywhere
+    /// that is drawn more than once.
+    var totalWordCount: Int {
+        project.documents.reduce(0) { $0 + wordCount(of: $1) }
     }
 
     var openFindings: [StoryFinding] {
@@ -346,14 +429,7 @@ final class WorkspaceModel: ObservableObject {
     }
 
     func duplicate(_ document: StoryDocument) {
-        var copy = document
-        copy.id = UUID()
-        copy.title = "\(document.displayTitle) Copy"
-        mutate("Duplicate Scene") { project in
-            let position = project.documents.firstIndex { $0.id == document.id }
-            project.documents.insert(copy, at: (position ?? project.documents.count - 1) + 1)
-        }
-        selectedDocumentID = copy.id
+        duplicateBinderItems([document.id])
     }
 
     func canMove(_ document: StoryDocument, by offset: Int) -> Bool {
@@ -412,7 +488,9 @@ final class WorkspaceModel: ObservableObject {
         guard let position = project.documents.firstIndex(where: { $0.id == document.id }) else { return }
         mutate("Delete Scene") { project in
             let removed = project.documents.remove(at: position)
+            _ = project.binder.remove(removed.id)
             project.story.trash.insert(TrashedItem(payload: .document(removed)), at: 0)
+            project.applyBinderOrder()
         }
         if selectedDocumentID == document.id {
             selectedDocumentID = project.documents.indices.contains(position)
@@ -441,7 +519,7 @@ final class WorkspaceModel: ObservableObject {
         mutate("New \(group.title)") { project in
             project.binder.insert(folder, into: destination, at: nil)
         }
-        selectedBinderID = folder.id
+        selectBinderRow(folder.id)
         renamingBinderID = folder.id
         return folder.id
     }
@@ -458,60 +536,48 @@ final class WorkspaceModel: ObservableObject {
 
     /// Deep-copies a group: its subtree, and a fresh copy of every scene in it.
     func duplicateGroup(_ id: UUID) {
-        guard let original = project.binder.find(id), original.isFolder else { return }
-        mutate("Duplicate") { project in
-            var copies: [StoryDocument] = []
-            func clone(_ item: BinderItem) -> BinderItem {
-                switch item.kind {
-                case .document:
-                    guard let source = project.documents.first(where: { $0.id == item.id }) else {
-                        return .document(UUID())
-                    }
-                    var copy = source
-                    copy.id = UUID()
-                    copies.append(copy)
-                    return .document(copy.id)
-                case .folder:
-                    var copy = item
-                    copy.id = UUID()
-                    copy.children = item.children.map(clone)
-                    return copy
-                }
-            }
-            var duplicate = clone(original)
-            duplicate.name = original.displayName + " copy"
-            project.documents.append(contentsOf: copies)
-            let place = project.binder.location(of: id)
-            project.binder.insert(duplicate, into: place?.parent, at: place.map { $0.index + 1 })
-            project.applyBinderOrder()
-        }
-        scheduleReindex()
+        duplicateBinderItems([id])
     }
 
-    /// Moves an item so it lands immediately above or below `sibling`.
+    /// Moves items so they land immediately above or below `sibling`, keeping
+    /// their reading order.
     ///
-    /// The destination is resolved *after* the item has been lifted out, because
-    /// removing it shifts every later sibling up by one — computing the index
+    /// The destination is resolved *after* the items have been lifted out,
+    /// because removing them shifts every later sibling up — computing the index
     /// first is exactly how a drop ends up one row from where it was aimed.
     @discardableResult
-    func moveBinderItem(_ id: UUID, beside sibling: UUID, below: Bool) -> Bool {
-        guard id != sibling else { return false }
-        if project.binder.contains(sibling, under: id) { return false }
+    func moveBinderItems(_ ids: [UUID], beside sibling: UUID, below: Bool) -> Bool {
+        let targets = project.binder.topmost(Set(ids))
+        guard !targets.isEmpty, !targets.contains(sibling) else { return false }
+        guard !targets.contains(where: { project.binder.contains(sibling, under: $0) }) else { return false }
 
         var moved = false
         mutate("Move in Binder") { project in
-            guard let item = project.binder.remove(id) else { return }
+            let lifted = targets.compactMap { project.binder.remove($0) }
+            guard !lifted.isEmpty else { return }
             guard let place = project.binder.location(of: sibling) else {
-                project.binder.insert(item, into: nil, at: nil)
+                for item in lifted { project.binder.insert(item, into: nil, at: nil) }
                 moved = true
                 return
             }
-            project.binder.insert(item, into: place.parent, at: place.index + (below ? 1 : 0))
+            // One index, walked forward: the second item goes under the first
+            // rather than in front of it, so a range dropped somewhere else
+            // arrives in the order it left.
+            var index = place.index + (below ? 1 : 0)
+            for item in lifted {
+                project.binder.insert(item, into: place.parent, at: index)
+                index += 1
+            }
             project.applyBinderOrder()
             moved = true
         }
         if moved { scheduleReindex() }
         return moved
+    }
+
+    @discardableResult
+    func moveBinderItem(_ id: UUID, beside sibling: UUID, below: Bool) -> Bool {
+        moveBinderItems([id], beside: sibling, below: below)
     }
 
     /// Every group, flattened with its depth, for a "Move To…" menu.
@@ -527,19 +593,136 @@ final class WorkspaceModel: ObservableObject {
         return out
     }
 
-    /// Selects a row of the outline. A scene also becomes the open scene; a
-    /// folder does not disturb whatever is being written.
-    func selectBinderRow(_ id: UUID?) {
-        selectedBinderID = id
-        if let id, project.document(id) != nil { selectedDocumentID = id }
+    /// The row that single-row commands aim at.
+    ///
+    /// Rename, New Scene and New Group are about one place in the book. With a
+    /// range selected that place is where the author started the range, not the
+    /// arbitrary first element of a set.
+    var selectedBinderID: UUID? {
+        if let id = binderAnchorID, selectedBinderIDs.contains(id) { return id }
+        return selectedBinderIDs.count == 1 ? selectedBinderIDs.first : nil
     }
 
-    /// What is currently being dragged in the binder, for the length of the drag.
+    /// The selection with anything already carried by a selected folder left
+    /// out — what a move, a duplicate, or a deletion actually applies to.
+    var binderSelectionRoots: [UUID] { project.binder.topmost(selectedBinderIDs) }
+
+    /// True when `id` belongs to a selection of several, and a menu opened on it
+    /// is therefore about all of them.
+    func isBinderSelectionMultiple(containing id: UUID) -> Bool {
+        selectedBinderIDs.count > 1 && selectedBinderIDs.contains(id)
+    }
+
+    /// Selects one row of the outline, dropping whatever else was selected. A
+    /// scene also becomes the open scene; a folder does not disturb whatever is
+    /// being written.
+    func selectBinderRow(_ id: UUID?) {
+        guard let id else {
+            selectedBinderIDs = []
+            binderAnchorID = nil
+            return
+        }
+        selectedBinderIDs = [id]
+        binderAnchorID = id
+        if project.document(id) != nil { selectedDocumentID = id }
+    }
+
+    /// ⌘-click: takes a row into the selection, or back out of it.
+    ///
+    /// Deliberately silent about the editor. A ⌘-click is the author building a
+    /// set to act on, not asking to read anything, and swapping the page under
+    /// them four times while they assemble it would be its own kind of rude.
+    func toggleBinderRow(_ id: UUID) {
+        if selectedBinderIDs.contains(id) {
+            selectedBinderIDs.remove(id)
+            if binderAnchorID == id { binderAnchorID = selectedBinderIDs.first }
+        } else {
+            selectedBinderIDs.insert(id)
+            binderAnchorID = id
+        }
+    }
+
+    /// ⇧-click: everything from the anchor to this row, as the outline is drawn
+    /// at this moment. `order` is the visible rows, top to bottom.
+    func extendBinderSelection(to id: UUID, through order: [UUID]) {
+        guard let anchor = binderAnchorID ?? selectedBinderIDs.first,
+              let start = order.firstIndex(of: anchor),
+              let end = order.firstIndex(of: id)
+        else {
+            // Nothing to measure from — an empty selection, or an anchor that
+            // has since been filtered or collapsed out of sight.
+            selectBinderRow(id)
+            return
+        }
+        selectedBinderIDs = Set(order[min(start, end)...max(start, end)])
+        binderAnchorID = anchor
+    }
+
+    /// A click on a row, with whatever was being held down at the time.
+    func clickBinderRow(_ id: UUID, modifiers: NSEvent.ModifierFlags, in order: [UUID]) {
+        if modifiers.contains(.shift) {
+            extendBinderSelection(to: id, through: order)
+        } else if modifiers.contains(.command) {
+            toggleBinderRow(id)
+        } else {
+            selectBinderRow(id)
+        }
+    }
+
+    /// The outline's own selection changes: arrow keys, Select All, and any
+    /// click its rows let through to `List`.
+    func selectBinderRows(_ ids: Set<UUID>) {
+        selectedBinderIDs = ids
+        if let anchor = binderAnchorID, ids.contains(anchor) {
+            // Keep it: a range the author is still extending measures from here.
+        } else {
+            binderAnchorID = ids.count == 1 ? ids.first : nil
+        }
+        // Arrowing down the outline opens each scene in turn, the way clicking
+        // them does. A selection of several opens nothing — there is no one
+        // scene being asked for.
+        if ids.count == 1, let id = ids.first, project.document(id) != nil {
+            selectedDocumentID = id
+        }
+    }
+
+    /// Right-clicking inside a selection of several keeps it, because the menu
+    /// that opens is about all of them. Anywhere else the row is selected first,
+    /// so a menu never names one chapter while another stays highlighted.
+    func presentBinderMenu(for id: UUID) {
+        guard !isBinderSelectionMultiple(containing: id) else { return }
+        selectBinderRow(id)
+    }
+
+    func isBinderGroupExpanded(_ id: UUID) -> Bool { !collapsedBinderIDs.contains(id) }
+
+    func toggleBinderGroup(_ id: UUID) {
+        if !collapsedBinderIDs.insert(id).inserted { collapsedBinderIDs.remove(id) }
+    }
+
+    func expandBinderGroup(_ id: UUID) { collapsedBinderIDs.remove(id) }
+
+    /// What is currently being dragged in the binder, for the length of the drag,
+    /// in reading order.
     ///
     /// Not `@Published`: the pointer moving across an outline must not redraw it,
     /// and nothing on screen depends on this value — the drop indicator is the
-    /// row's own state. See `BinderDrag` for why the id lives here at all.
-    var draggingBinderID: UUID?
+    /// row's own state. See `BinderDrag` for why the ids live here at all.
+    var draggingBinderIDs: [UUID] = []
+
+    /// Begins a drag from `id`: the whole selection when that row is part of it,
+    /// and that row alone otherwise.
+    ///
+    /// Dragging a row that is not selected is a statement about that row, not
+    /// about whatever happened to be highlighted a moment ago — and carrying the
+    /// old selection along would move scenes the author had stopped looking at.
+    @discardableResult
+    func beginBinderDrag(from id: UUID) -> [UUID] {
+        draggingBinderIDs = isBinderSelectionMultiple(containing: id) ? binderSelectionRoots : [id]
+        return draggingBinderIDs
+    }
+
+    func endBinderDrag() { draggingBinderIDs = [] }
 
     /// Which row is being renamed in place. The outline watches this so a folder
     /// made from a menu opens straight into an editable field — naming it is the
@@ -559,24 +742,38 @@ final class WorkspaceModel: ObservableObject {
         }
     }
 
-    /// Moves an item in the tree. Returns false when the drop is refused.
+    /// Moves items into a group, or to the top level when `parent` is nil.
+    /// Returns false when the drop is refused.
     ///
     /// The one refusal that matters is dropping a folder into its own subtree:
     /// the move would detach that whole branch from the root and the author
     /// would watch half their book disappear. Everything else is allowed,
     /// including dragging a scene out of every folder to the top level.
     @discardableResult
-    func moveBinderItem(_ id: UUID, into parent: UUID?, at index: Int?) -> Bool {
-        guard id != parent else { return false }
-        if let parent, project.binder.contains(parent, under: id) { return false }
+    func moveBinderItems(_ ids: [UUID], into parent: UUID?, at index: Int?) -> Bool {
+        let targets = project.binder.topmost(Set(ids))
+        guard !targets.isEmpty else { return false }
+        if let parent {
+            guard !targets.contains(parent) else { return false }
+            guard !targets.contains(where: { project.binder.contains(parent, under: $0) }) else { return false }
+        }
 
         mutate("Move in Binder") { project in
-            guard let item = project.binder.remove(id) else { return }
-            project.binder.insert(item, into: parent, at: index)
+            var next = index
+            for id in targets {
+                guard let item = project.binder.remove(id) else { continue }
+                project.binder.insert(item, into: parent, at: next)
+                if next != nil { next! += 1 }
+            }
             project.applyBinderOrder()
         }
         scheduleReindex()
         return true
+    }
+
+    @discardableResult
+    func moveBinderItem(_ id: UUID, into parent: UUID?, at index: Int?) -> Bool {
+        moveBinderItems([id], into: parent, at: index)
     }
 
     /// Deletes a folder. Its contents come with it — scenes into the trash,
@@ -614,6 +811,137 @@ final class WorkspaceModel: ObservableObject {
             deleteFolder(id)
         }
         return true
+    }
+
+    /// Throws a whole selection away in one act.
+    ///
+    /// One `mutate`, and therefore one entry on the undo stack: an author who
+    /// selected six scenes and changed their mind presses ⌘Z once, not six
+    /// times, and gets all six back rather than watching them return one at a
+    /// time. Each still lands in the trash as its own restorable item, so they
+    /// can also be brought back one at a time from the Trash room if that is
+    /// what was wanted.
+    @discardableResult
+    func trashBinderItems(_ ids: [UUID]) -> Bool {
+        let targets = project.binder.topmost(Set(ids))
+        guard targets.count > 1 else {
+            return targets.first.map { trashBinderItem($0) } ?? false
+        }
+
+        mutate("Move to Trash") { project in
+            for id in targets {
+                guard let removed = project.binder.remove(id) else { continue }
+                switch removed.kind {
+                case .document:
+                    guard let position = project.documents.firstIndex(where: { $0.id == removed.id }) else { continue }
+                    project.story.trash.insert(
+                        TrashedItem(payload: .document(project.documents.remove(at: position))),
+                        at: 0
+                    )
+                case .folder:
+                    var carried: [StoryDocument] = []
+                    for documentID in removed.children.documentIDs {
+                        guard let position = project.documents.firstIndex(where: { $0.id == documentID }) else { continue }
+                        carried.append(project.documents.remove(at: position))
+                    }
+                    project.story.trash.insert(TrashedItem(payload: .group(removed, carried)), at: 0)
+                }
+            }
+            project.applyBinderOrder()
+        }
+        selectedBinderIDs = []
+        binderAnchorID = nil
+        // Some of what just went to the trash may be the scene on screen.
+        repairSelection()
+        scheduleReindex()
+        return true
+    }
+
+    /// Copies whatever is selected: folders with their subtrees and a fresh copy
+    /// of every scene inside them, scenes on their own. Each copy lands directly
+    /// under its original rather than at the end of the book.
+    func duplicateBinderItems(_ ids: [UUID]) {
+        let targets = project.binder.topmost(Set(ids))
+        guard !targets.isEmpty else { return }
+        var made: [UUID] = []
+        mutate("Duplicate") { project in
+            for id in targets {
+                if let copy = Self.copyBinderItem(id, in: &project) { made.append(copy) }
+            }
+            project.applyBinderOrder()
+        }
+        // The copies become the selection, so the next thing the author does
+        // lands on what they just made rather than on what they copied it from.
+        // One of them is also opened, exactly as duplicating a single scene has
+        // always done.
+        guard !made.isEmpty else { return }
+        if made.count == 1, let id = made.first {
+            selectBinderRow(id)
+        } else {
+            selectedBinderIDs = Set(made)
+            binderAnchorID = made.first
+        }
+        scheduleReindex()
+    }
+
+    /// One item's copy, made inside a mutation someone else is running so a
+    /// selection of eight is still a single undoable act. Returns the copy's id.
+    @discardableResult
+    private static func copyBinderItem(_ id: UUID, in project: inout StoryProject) -> UUID? {
+        guard let original = project.binder.find(id) else { return nil }
+        var copies: [StoryDocument] = []
+
+        func clone(_ item: BinderItem) -> BinderItem {
+            switch item.kind {
+            case .document:
+                guard let source = project.documents.first(where: { $0.id == item.id }) else {
+                    return .document(UUID())
+                }
+                var copy = source
+                copy.id = UUID()
+                copies.append(copy)
+                return .document(copy.id)
+            case .folder:
+                var copy = item
+                copy.id = UUID()
+                copy.children = item.children.map(clone)
+                return copy
+            }
+        }
+
+        var duplicate = clone(original)
+        // Only the thing the author pointed at is renamed. A chapter copied
+        // whole keeps the scene titles inside it: "Scene Four Copy" repeated
+        // down a duplicated Part is noise nobody asked for.
+        if duplicate.isFolder {
+            duplicate.name = original.displayName + " copy"
+        } else if let position = copies.firstIndex(where: { $0.id == duplicate.id }) {
+            copies[position].title = "\(copies[position].displayTitle) Copy"
+        }
+        project.documents.append(contentsOf: copies)
+        let place = project.binder.location(of: id)
+        project.binder.insert(duplicate, into: place?.parent, at: place.map { $0.index + 1 })
+        return duplicate.id
+    }
+
+    /// The same status for every selected scene, in one act.
+    func setStatus(_ status: DocumentStatus, for ids: [UUID]) {
+        let targets = Set(ids)
+        guard !targets.isEmpty else { return }
+        mutate("Change Status") { project in
+            for index in project.documents.indices where targets.contains(project.documents[index].id) {
+                project.documents[index].status = status
+            }
+        }
+    }
+
+    /// The same type for every selected group. Like the single-row version, this
+    /// changes a word and a drawing and touches nothing inside.
+    func changeGroupType(_ ids: [UUID], to group: GroupKind) {
+        guard !ids.isEmpty else { return }
+        mutate("Change Type") { project in
+            for id in ids { project.binder.setGroup(id, to: group) }
+        }
     }
 
     // MARK: - Outline
@@ -1231,9 +1559,15 @@ final class WorkspaceModel: ObservableObject {
             return
         }
         let snapshot = project
+        let snapshotPresentation = presentation
         Task {
             do {
-                let record = try await repository.createSnapshot(snapshot, to: projectURL, reason: reason)
+                let record = try await repository.createSnapshot(
+                    snapshot,
+                    presentation: snapshotPresentation,
+                    to: projectURL,
+                    reason: reason
+                )
                 history.insert(record, at: 0)
                 selectedSnapshotID = record.id
                 lastSnapshotAt = record.createdAt
@@ -1246,21 +1580,39 @@ final class WorkspaceModel: ObservableObject {
     /// Restore never destroys later history: it writes a save point for where you
     /// were, then commits the older state as a new revision (17-Reliability).
     func restoreSnapshot(_ record: ProjectSnapshotRecord) {
-        guard let projectURL else { return }
+        guard let projectURL, !isRestoringSnapshot else { return }
         let current = project
+        let currentPresentation = presentation
+        let expectedFingerprint = fingerprint
+        isRestoringSnapshot = true
         persistence = .saving
 
         Task {
+            defer { isRestoringSnapshot = false }
             do {
-                _ = try await repository.createSnapshot(current, to: projectURL, reason: HistoryReason.beforeRestore)
-                try await repository.save(record.project, to: projectURL)
+                _ = try await repository.createSnapshot(
+                    current,
+                    presentation: currentPresentation,
+                    to: projectURL,
+                    reason: HistoryReason.beforeRestore
+                )
+                try await repository.save(
+                    record.project,
+                    to: projectURL,
+                    presentation: record.presentation,
+                    expectedFingerprint: expectedFingerprint
+                )
                 let committed = try await repository.createSnapshot(
                     record.project,
+                    presentation: record.presentation,
                     to: projectURL,
                     reason: HistoryReason.restored(from: record)
                 )
 
                 project = record.project
+                presentation = record.presentation
+                lastSyncedProject = record.project
+                lastSyncedPresentation = record.presentation
                 repairSelection()
                 history = try await repository.loadSnapshots(at: projectURL)
                 selectedSnapshotID = committed.id
@@ -1294,14 +1646,29 @@ final class WorkspaceModel: ObservableObject {
     func export(profile: ExportProfile) {
         let panel = NSSavePanel()
         panel.title = "Export Manuscript"
-        panel.nameFieldStringValue = "\(project.title).\(profile.format.fileExtension)"
+        let rawTitle = project.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let baseName = rawTitle.isEmpty ? "Manuscript" : rawTitle
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ":", with: "-")
+        panel.nameFieldStringValue = "\(baseName).\(profile.format.fileExtension)"
+        panel.allowedContentTypes = [profile.format.contentType]
         panel.canCreateDirectories = true
         panel.prompt = "Export"
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
+        let destination = url.pathExtension.isEmpty
+            ? url.appendingPathExtension(profile.format.fileExtension)
+            : url
+
         do {
-            let record = try ExportService.write(project, profile: profile, to: url)
+            let record = try ExportService.write(
+                project,
+                presentation: presentation,
+                profile: profile,
+                selectedDocumentID: selectedDocumentID,
+                to: destination
+            )
             writeExportRecord(record)
         } catch {
             self.error = WorkspaceError(error)
@@ -1327,12 +1694,224 @@ final class WorkspaceModel: ObservableObject {
     /// itself changes — never through a file presenter, which would spend its
     /// life reacting to our own writes.
     func checkForExternalChanges() {
-        guard let projectURL, let known = fingerprint, persistence != .saving else { return }
-        Task {
+        guard let projectURL, let known = fingerprint, !saveInFlight else { return }
+        externalSync?.cancel()
+        externalSync = Task { [weak self] in
+            guard let self else { return }
             let current = await repository.fingerprint(at: projectURL)
-            guard current != known, externalChange == nil else { return }
-            externalChange = ExternalChange(fingerprint: current)
+            guard !Task.isCancelled, current != known else { return }
+            await self.synchronizeExternalChanges(at: projectURL, fingerprint: current)
         }
+    }
+
+    /// Reads the disk version and performs a conservative three-way merge using
+    /// the last successful load/save as the base. This is the normal path for an
+    /// AI co-author: edits to a scene the app has not changed simply appear. A
+    /// scene changed in both places is held for an explicit choice, with neither
+    /// version written over the other.
+    private func synchronizeExternalChanges(
+        at projectURL: URL,
+        fingerprint observedFingerprint: String,
+        saveMergedResult: Bool = false
+    ) async {
+        do {
+            let loaded = try await repository.loadProject(at: projectURL)
+            let stableFingerprint = await repository.fingerprint(at: projectURL)
+            guard self.projectURL == projectURL else { return }
+
+            let base = lastSyncedProject ?? project
+            let projectMerge = Self.mergeProjects(base: base, local: project, disk: loaded.project)
+            let presentationMerge = Self.mergePresentation(
+                base: lastSyncedPresentation,
+                local: presentation,
+                disk: loaded.presentation
+            )
+            let projectMergePreferringDisk = Self.mergeProjects(
+                base: base,
+                local: loaded.project,
+                disk: project
+            )
+            let presentationMergePreferringDisk = Self.mergePresentation(
+                base: lastSyncedPresentation,
+                local: loaded.presentation,
+                disk: presentation
+            )
+            let conflicts = projectMerge.conflictingDocumentIDs
+                .union(presentationMerge.conflictingDocumentIDs)
+
+            guard conflicts.isEmpty, !projectMerge.hasStructuralConflict else {
+                externalChange = ExternalChange(
+                    fingerprint: stableFingerprint,
+                    disk: loaded,
+                    mergedKeepingLocal: projectMerge.project,
+                    presentationKeepingLocal: presentationMerge.layers,
+                    mergedUsingDisk: projectMergePreferringDisk.project,
+                    presentationUsingDisk: presentationMergePreferringDisk.layers,
+                    conflictingDocumentIDs: conflicts,
+                    hasStructuralConflict: projectMerge.hasStructuralConflict
+                )
+                // Remember the version we inspected so the watcher does not keep
+                // raising the same conflict. Saving remains blocked until the
+                // author chooses a side.
+                fingerprint = stableFingerprint
+                persistence = .conflicted
+                return
+            }
+
+            project = projectMerge.project
+            presentation = presentationMerge.layers
+            pendingAdoptions.formUnion(loaded.adopted)
+            pendingDirectories.formUnion(loaded.directories)
+            lastSyncedProject = loaded.project
+            lastSyncedPresentation = loaded.presentation
+            fingerprint = stableFingerprint
+            externalChange = nil
+            repairSelection()
+            rebuildDerived()
+            watchProjectFolder(projectURL)
+
+            let needsWrite = saveMergedResult
+                || projectMerge.project != loaded.project
+                || presentationMerge.layers != loaded.presentation
+            if needsWrite {
+                writeNow()
+            } else {
+                persistence = .saved
+            }
+
+            if !loaded.warnings.isEmpty {
+                recoveryNotice = loaded.warnings.joined(separator: "\n\n")
+            }
+        } catch {
+            // Keep the previous fingerprint so a focus change retries the read;
+            // a transient half-written external file must not be mistaken for a
+            // version we successfully synchronized.
+            _ = observedFingerprint
+            persistence = .failed
+            self.error = WorkspaceError(error)
+        }
+    }
+
+    private struct ProjectMerge {
+        var project: StoryProject
+        var conflictingDocumentIDs: Set<UUID>
+        var hasStructuralConflict: Bool
+    }
+
+    private struct PresentationMerge {
+        var layers: [UUID: PresentationLayer]
+        var conflictingDocumentIDs: Set<UUID>
+    }
+
+    private static func choose<Value: Equatable>(
+        base: Value,
+        local: Value,
+        disk: Value
+    ) -> (value: Value, conflict: Bool) {
+        if local == disk { return (local, false) }
+        if local == base { return (disk, false) }
+        if disk == base { return (local, false) }
+        return (local, true)
+    }
+
+    private static func mergeProjects(
+        base: StoryProject,
+        local: StoryProject,
+        disk: StoryProject
+    ) -> ProjectMerge {
+        let title = choose(base: base.title, local: local.title, disk: disk.title)
+        let story = choose(base: base.story, local: local.story, disk: disk.story)
+        let binder = choose(base: base.binder, local: local.binder, disk: disk.binder)
+        let documents = mergeDocuments(base: base.documents, local: local.documents, disk: disk.documents)
+        let archived = mergeDocuments(
+            base: base.archivedDocuments,
+            local: local.archivedDocuments,
+            disk: disk.archivedDocuments
+        )
+
+        var merged = StoryProject(
+            id: local.id,
+            title: title.value,
+            documents: documents.documents,
+            story: story.value,
+            archivedDocuments: archived.documents,
+            binder: binder.value
+        )
+        merged.applyBinderOrder()
+
+        return ProjectMerge(
+            project: merged,
+            conflictingDocumentIDs: documents.conflicts.union(archived.conflicts),
+            hasStructuralConflict: local.id != disk.id || title.conflict || story.conflict || binder.conflict
+        )
+    }
+
+    private static func mergeDocuments(
+        base: [StoryDocument],
+        local: [StoryDocument],
+        disk: [StoryDocument]
+    ) -> (documents: [StoryDocument], conflicts: Set<UUID>) {
+        let baseByID = Dictionary(uniqueKeysWithValues: base.map { ($0.id, $0) })
+        let localByID = Dictionary(uniqueKeysWithValues: local.map { ($0.id, $0) })
+        let diskByID = Dictionary(uniqueKeysWithValues: disk.map { ($0.id, $0) })
+        let order = local.map(\.id) + disk.map(\.id).filter { localByID[$0] == nil }
+        var documents: [StoryDocument] = []
+        var conflicts = Set<UUID>()
+
+        for id in order {
+            let baseValue = baseByID[id]
+            let localValue = localByID[id]
+            let diskValue = diskByID[id]
+
+            switch (baseValue, localValue, diskValue) {
+            case (nil, let local?, nil):
+                documents.append(local)
+            case (nil, nil, let disk?):
+                documents.append(disk)
+            case (nil, let local?, let disk?):
+                documents.append(local)
+                if local != disk { conflicts.insert(id) }
+            case (let base?, nil, nil):
+                _ = base // deleted in both places
+            case (let base?, nil, let disk?):
+                if disk != base {
+                    documents.append(disk)
+                    conflicts.insert(id)
+                }
+            case (let base?, let local?, nil):
+                if local != base {
+                    documents.append(local)
+                    conflicts.insert(id)
+                }
+            case (let base?, let local?, let disk?):
+                let result = choose(base: base, local: local, disk: disk)
+                documents.append(result.value)
+                if result.conflict { conflicts.insert(id) }
+            case (nil, nil, nil):
+                break
+            }
+        }
+        return (documents, conflicts)
+    }
+
+    private static func mergePresentation(
+        base: [UUID: PresentationLayer],
+        local: [UUID: PresentationLayer],
+        disk: [UUID: PresentationLayer]
+    ) -> PresentationMerge {
+        var layers: [UUID: PresentationLayer] = [:]
+        var conflicts = Set<UUID>()
+        let ids = Set(base.keys).union(local.keys).union(disk.keys)
+
+        for id in ids {
+            let baseValue = base[id] ?? PresentationLayer()
+            let localValue = local[id] ?? PresentationLayer()
+            let diskValue = disk[id] ?? PresentationLayer()
+            let result = choose(base: baseValue, local: localValue, disk: diskValue)
+            if !result.value.isEmpty { layers[id] = result.value }
+            if result.conflict { conflicts.insert(id) }
+        }
+        return PresentationMerge(layers: layers, conflictingDocumentIDs: conflicts)
     }
 
     /// Watches `manuscript/` and `archive/` for the length of the session.
@@ -1351,7 +1930,20 @@ final class WorkspaceModel: ObservableObject {
     private func watchProjectFolder(_ url: URL) {
         stopWatchingProjectFolder()
 
-        for directory in ["manuscript", "archive"] {
+        Task { [weak self] in
+            // A vnode source reports a directory's own entries and says nothing
+            // about what happens inside its subdirectories. The manuscript is a
+            // tree of real directories now, so every one of them needs its own
+            // descriptor or a scene dropped into Chapter Four goes unnoticed
+            // until the window next regains focus.
+            let nested = await self?.repository.directoryPaths(under: "manuscript", of: url) ?? []
+            guard let self else { return }
+            self.watch(["manuscript", "archive"] + nested, in: url)
+        }
+    }
+
+    private func watch(_ directories: [String], in url: URL) {
+        for directory in directories {
             let path = url.appending(path: directory).path
             let descriptor = Darwin.open(path, O_EVTONLY)
             guard descriptor >= 0 else { continue }
@@ -1398,22 +1990,80 @@ final class WorkspaceModel: ObservableObject {
         }
     }
 
-    /// Takes the version on disk. StoryLoom never silently overwrites an external
-    /// edit, and it never silently discards yours either — this is a choice.
+    /// Takes the version on disk after first preserving the current in-memory
+    /// work as a save point. Used only for a true simultaneous-edit conflict;
+    /// ordinary AI edits are absorbed automatically.
     func reloadFromDisk() {
-        guard let projectURL else { return }
-        externalChange = nil
-        open(projectURL)
+        guard let projectURL, let change = externalChange else { return }
+        let local = project
+        let localPresentation = presentation
+        Task {
+            do {
+                let record = try await repository.createSnapshot(
+                    local,
+                    presentation: localPresentation,
+                    to: projectURL,
+                    reason: "Before accepting external changes"
+                )
+                project = change.mergedUsingDisk
+                presentation = change.presentationUsingDisk
+                lastSyncedProject = change.disk.project
+                lastSyncedPresentation = change.disk.presentation
+                fingerprint = change.fingerprint
+                pendingAdoptions.formUnion(change.disk.adopted)
+                pendingDirectories.formUnion(change.disk.directories)
+                externalChange = nil
+                history.insert(record, at: 0)
+                repairSelection()
+                rebuildDerived()
+                watchProjectFolder(projectURL)
+                if !change.disk.warnings.isEmpty {
+                    recoveryNotice = change.disk.warnings.joined(separator: "\n\n")
+                }
+                writeNow()
+            } catch {
+                self.error = WorkspaceError(error)
+            }
+        }
     }
 
     func keepMyVersion() {
-        externalChange = nil
-        writeNow()
+        guard let projectURL, let change = externalChange else { return }
+        Task {
+            do {
+                let record = try await repository.createSnapshot(
+                    change.disk.project,
+                    presentation: change.disk.presentation,
+                    to: projectURL,
+                    reason: "External version before overwrite"
+                )
+                history.insert(record, at: 0)
+                project = change.mergedKeepingLocal
+                presentation = change.presentationKeepingLocal
+                lastSyncedProject = change.disk.project
+                lastSyncedPresentation = change.disk.presentation
+                fingerprint = change.fingerprint
+                pendingAdoptions.formUnion(change.disk.adopted)
+                pendingDirectories.formUnion(change.disk.directories)
+                externalChange = nil
+                repairSelection()
+                rebuildDerived()
+                watchProjectFolder(projectURL)
+                if !change.disk.warnings.isEmpty {
+                    recoveryNotice = change.disk.warnings.joined(separator: "\n\n")
+                }
+                writeNow()
+            } catch {
+                self.error = WorkspaceError(error)
+            }
+        }
     }
 
     // MARK: - Private
 
     private func adopt(_ url: URL, _ load: @escaping () async throws -> ProjectLoad) {
+        openGeneration &+= 1
+        let generation = openGeneration
         let previous = securityScopedURL
         securityScopedURL?.stopAccessingSecurityScopedResource()
         _ = url.startAccessingSecurityScopedResource()
@@ -1424,14 +2074,21 @@ final class WorkspaceModel: ObservableObject {
             do {
                 let loaded = try await load()
                 let interrupted = await repository.hasInterruptedWrite(at: url)
+                let loadedHistory = (try? await repository.loadSnapshots(at: url)) ?? []
+                let loadedFingerprint = await repository.fingerprint(at: url)
+                guard generation == openGeneration else { return }
 
                 project = loaded.project
+                presentation = loaded.presentation
                 projectURL = url
                 sessionBaseline = loaded.project.totalWordCount
-                history = try await repository.loadSnapshots(at: url)
+                history = loadedHistory
                 selectedSnapshotID = history.first?.id
                 lastSnapshotAt = history.first?.createdAt
-                fingerprint = await repository.fingerprint(at: url)
+                fingerprint = loadedFingerprint
+                lastSyncedProject = loaded.project
+                lastSyncedPresentation = loaded.presentation
+                externalChange = nil
                 persistence = .saved
                 hasProject = true
                 isRestoring = false
@@ -1441,6 +2098,7 @@ final class WorkspaceModel: ObservableObject {
                 undoManager?.removeAllActions()
                 watchProjectFolder(url)
 
+                pendingDirectories = Set(loaded.directories)
                 if !loaded.adopted.isEmpty {
                     // Written back at once, so the files stop being strays: they
                     // get their front matter, a place in the manifest, and a row
@@ -1453,10 +2111,13 @@ final class WorkspaceModel: ObservableObject {
                     pendingAdoptions = []
                 }
 
+                var notices = loaded.warnings
                 if interrupted {
-                    recoveryNotice = "The last save to this project did not finish. Its files are intact and were loaded normally — but if anything is missing, History has a save point from before that write."
+                    notices.append("The last save did not finish. The readable project files were loaded; check History if anything looks incomplete.")
                 }
+                recoveryNotice = notices.isEmpty ? nil : notices.joined(separator: "\n\n")
             } catch {
+                guard generation == openGeneration else { return }
                 isRestoring = false
                 securityScopedURL?.stopAccessingSecurityScopedResource()
                 if let previous { _ = previous.startAccessingSecurityScopedResource() }
@@ -1538,10 +2199,18 @@ final class WorkspaceModel: ObservableObject {
         if selectedDocumentID == nil || project.document(selectedDocumentID!) == nil {
             selectedDocumentID = project.documents.first?.id
         }
-        // A folder that has been deleted, or undone back out of existence, must
-        // not leave the outline pointing at a row that is not there.
-        if let id = selectedBinderID, project.binder.find(id) == nil {
-            selectedBinderID = selectedDocumentID
+        // Rows that have been deleted, or undone back out of existence, must not
+        // leave the outline pointing at things that are not there.
+        let live = project.binder.allIDs
+        if !selectedBinderIDs.isSubset(of: live) {
+            selectedBinderIDs.formIntersection(live)
+        }
+        if selectedBinderIDs.isEmpty, let id = selectedDocumentID {
+            selectedBinderIDs = [id]
+            binderAnchorID = id
+        }
+        if let anchor = binderAnchorID, !selectedBinderIDs.contains(anchor) {
+            binderAnchorID = nil
         }
         if selectedThreadID == nil || project.thread(selectedThreadID!) == nil {
             selectedThreadID = project.story.threads.first?.id
@@ -1579,12 +2248,14 @@ final class WorkspaceModel: ObservableObject {
 
     private func rebuildDerived() {
         let snapshot = project
+        derivedGeneration &+= 1
+        let generation = derivedGeneration
         Task.detached(priority: .utility) {
             let index = StoryIndex(project: snapshot)
             let arcs = ThreadTracker.arcs(for: snapshot)
             let findings = ContinuityChecker.findings(for: snapshot, index: index, arcs: arcs)
             await MainActor.run { [weak self] in
-                guard let self, self.project.id == snapshot.id else { return }
+                guard let self, self.derivedGeneration == generation else { return }
                 self.index = index
                 self.threadArcs = arcs
                 self.findings = findings
@@ -1599,6 +2270,10 @@ final class WorkspaceModel: ObservableObject {
             persistence = .unsaved
             return
         }
+        guard externalChange == nil else {
+            persistence = .conflicted
+            return
+        }
         autosave?.cancel()
         persistence = .saving
         autosave = Task { [weak self] in
@@ -1610,28 +2285,64 @@ final class WorkspaceModel: ObservableObject {
 
     private func writeNow() {
         guard let projectURL else { return }
+        guard externalChange == nil else {
+            persistence = .conflicted
+            return
+        }
+        if saveInFlight {
+            saveAgain = true
+            return
+        }
         let snapshot = project
+        let snapshotPresentation = presentation
+        let expectedFingerprint = fingerprint
+        saveInFlight = true
         persistence = .saving
 
         let claiming = pendingAdoptions
+        let directories = pendingDirectories
 
         Task {
+            defer {
+                saveInFlight = false
+                if saveAgain {
+                    saveAgain = false
+                    writeNow()
+                }
+            }
             do {
-                try await repository.save(snapshot, to: projectURL, claiming: claiming)
+                try await repository.save(
+                    snapshot,
+                    to: projectURL,
+                    presentation: snapshotPresentation,
+                    claiming: claiming,
+                    directories: directories,
+                    expectedFingerprint: expectedFingerprint
+                )
                 // Those files are now scenes, written under StoryLoom's own
                 // names. Cleared only on the way out of a save that worked.
                 pendingAdoptions.subtract(claiming)
                 fingerprint = await repository.fingerprint(at: projectURL)
+                lastSyncedProject = snapshot
+                lastSyncedPresentation = snapshotPresentation
 
                 // Only claim "saved" if nothing changed while we were writing.
                 guard project == snapshot else { return }
                 persistence = .saved
 
                 if shouldSnapshot() {
-                    let record = try await repository.createSnapshot(snapshot, to: projectURL, reason: HistoryReason.autosave)
+                    let record = try await repository.createSnapshot(
+                        snapshot,
+                        presentation: snapshotPresentation,
+                        to: projectURL,
+                        reason: HistoryReason.autosave
+                    )
                     lastSnapshotAt = record.createdAt
                     history.insert(record, at: 0)
                 }
+            } catch ProjectRepositoryError.projectChangedOnDisk {
+                let current = await repository.fingerprint(at: projectURL)
+                await synchronizeExternalChanges(at: projectURL, fingerprint: current, saveMergedResult: true)
             } catch {
                 persistence = .failed
                 self.error = WorkspaceError(error)
@@ -1649,10 +2360,28 @@ final class WorkspaceModel: ObservableObject {
         autosave?.cancel()
         guard let projectURL, persistence != .saved else { return }
         let snapshot = project
+        let snapshotPresentation = presentation
+        let expectedFingerprint = fingerprint
         let repository = self.repository
         let semaphore = DispatchSemaphore(value: 0)
         Task.detached {
-            try? await repository.save(snapshot, to: projectURL)
+            do {
+                try await repository.save(
+                    snapshot,
+                    to: projectURL,
+                    presentation: snapshotPresentation,
+                    expectedFingerprint: expectedFingerprint
+                )
+            } catch {
+                // Never overwrite an AI edit during termination. A recovery
+                // checkpoint keeps the local version available on next launch.
+                _ = try? await repository.createSnapshot(
+                    snapshot,
+                    presentation: snapshotPresentation,
+                    to: projectURL,
+                    reason: "Unsaved local work at quit"
+                )
+            }
             semaphore.signal()
         }
         _ = semaphore.wait(timeout: .now() + 2)
@@ -1745,6 +2474,7 @@ enum PersistenceState: Equatable {
     case saving
     case saved
     case failed
+    case conflicted
 
     var title: String {
         switch self {
@@ -1753,6 +2483,7 @@ enum PersistenceState: Equatable {
         case .saving: "Saving…"
         case .saved: "Saved"
         case .failed: "Could not save"
+        case .conflicted: "Needs merge"
         }
     }
 
@@ -1763,6 +2494,7 @@ enum PersistenceState: Equatable {
         case .saving: .saving
         case .saved: .saved
         case .failed: .threat
+        case .conflicted: .threat
         }
     }
 
@@ -1770,7 +2502,7 @@ enum PersistenceState: Equatable {
         switch self {
         case .unsaved, .loading, .saving: .secondary
         case .saved: Palette.confirmed
-        case .failed: Palette.conflict
+        case .failed, .conflicted: Palette.conflict
         }
     }
 }
@@ -1791,4 +2523,17 @@ struct WorkspaceError: Identifiable {
 struct ExternalChange: Identifiable {
     let id = UUID()
     let fingerprint: String
+    let disk: ProjectLoad
+    /// Both candidates already contain every non-conflicting change. The choice
+    /// controls only values that genuinely changed on both sides.
+    let mergedKeepingLocal: StoryProject
+    let presentationKeepingLocal: [UUID: PresentationLayer]
+    let mergedUsingDisk: StoryProject
+    let presentationUsingDisk: [UUID: PresentationLayer]
+    let conflictingDocumentIDs: Set<UUID>
+    let hasStructuralConflict: Bool
+
+    var conflictCount: Int {
+        conflictingDocumentIDs.count + (hasStructuralConflict ? 1 : 0)
+    }
 }

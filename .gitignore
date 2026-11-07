@@ -43,15 +43,7 @@ icons/
 /*.svg
 *.psd
 
-# graphify
-#
-# graphify-out/ is *committed* on purpose — it is the map, and committing it
-# means everyone (and every assistant) starts with one instead of paying to
-# rebuild it. Only the local-only pieces are excluded.
-graphify-out/cost.json
-graphify-out/.graphify_*
-# Uncomment to keep the repo smaller at the cost of a slower first extract:
-# graphify-out/cache/
+graphify-out/
 
 # Scratch
 *.log

@@ -38,6 +38,20 @@ struct WorkspaceView: View {
                 split
             }
         }
+        .disabled(workspace.isRestoringSnapshot)
+        .overlay {
+            if workspace.isRestoringSnapshot {
+                ZStack {
+                    Color(nsColor: .windowBackgroundColor).opacity(0.78)
+                    ProgressView("Restoring save point…")
+                        .controlSize(.large)
+                        .padding(Space.large)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.panel))
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Restoring save point")
+            }
+        }
         .environment(\.proseStyle, settings.proseStyle(appearance: colorScheme))
         .preferredColorScheme(settings.appearance.colorScheme)
         .sheet(item: $sheet) { destination in
@@ -45,6 +59,7 @@ struct WorkspaceView: View {
             case .search: SearchPanel(sheet: $sheet)
             case .palette: CommandPalette(sheet: $sheet)
             case .export: ExportPanel(sheet: $sheet)
+            case .guide: WritingGuide(sheet: $sheet)
             }
         }
         .alert(item: $workspace.error) { error in
@@ -124,12 +139,13 @@ struct WorkspaceView: View {
                     workspace.isFocusMode = false
                 } label: {
                     Label { Text("Leave Focus") } icon: { GlyphIcon(glyph: .leaveFocus, size: Icon.toolbar) }
-                        .labelStyle(.iconOnly)
+                        .labelStyle(.titleAndIcon)
                 }
                 .buttonStyle(.plain)
                 .padding(Space.regular)
                 .foregroundStyle(.tertiary)
-                .help("Leave focus (⌥⌘F)")
+                .help("Leave focus (Escape or ⌥⌘F)")
+                .accessibilityLabel("Leave Focus")
                 .keyboardShortcut(.escape, modifiers: [])
             }
     }
@@ -245,16 +261,17 @@ struct WorkspaceView: View {
     @ViewBuilder
     private var banners: some View {
         VStack(spacing: 0) {
-            if workspace.externalChange != nil {
+            if let change = workspace.externalChange {
                 Banner(
-                    glyph: .saving,
-                    tint: Palette.caution,
-                    title: "External changes detected",
-                    message: "Choose whether to accept the changes on disk or keep your current version."
+                    glyph: .interrupted,
+                    tint: Palette.conflict,
+                    title: "Simultaneous edits need a choice",
+                    message: change.hasStructuralConflict
+                        ? "The project structure changed both in StoryLoom and on disk. Non-conflicting edits from both sides are preserved, and both versions are saved to History before your choice is applied."
+                        : "\(change.conflictingDocumentIDs.count) \(change.conflictingDocumentIDs.count == 1 ? "scene was" : "scenes were") edited both here and on disk. Other edits from both sides are preserved, and both versions are saved to History before your choice is applied."
                 ) {
-                    Button("Decline") { workspace.keepMyVersion() }
-                    Button("Accept Changes") { workspace.reloadFromDisk() }
-                        .buttonStyle(.borderedProminent)
+                    Button("Keep My Version") { workspace.keepMyVersion() }
+                    Button("Use Disk Version") { workspace.reloadFromDisk() }
                 }
             }
             if let notice = workspace.recoveryNotice {
@@ -294,16 +311,56 @@ struct WorkspaceView: View {
         case .search: sheet = .search
         case .palette: sheet = .palette
         case .export: sheet = .export
+        case .guide: sheet = .guide
         }
     }
 }
 
 // MARK: - Sheets
 
+private struct WritingGuide: View {
+    @Binding var sheet: WorkspaceSheet?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.regular) {
+            HStack {
+                Text("Writing in StoryLoom")
+                    .font(.system(size: 19, weight: .semibold))
+                Spacer()
+                Button("Done") { sheet = nil }
+                    .keyboardShortcut(.defaultAction)
+            }
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: Space.regular) {
+                    guideSection("Scenes", "Draft on the page. Use the inspector to record what changes in a scene, without interrupting the prose.")
+                    guideSection("Threads", "Track questions, mysteries, and promises across scenes. Link a scene when it opens, moves, or answers a thread.")
+                    guideSection("Comments", "Select a passage and add a comment. StoryLoom anchors it to the words so it can follow them as the draft changes.")
+                    guideSection("Formatting", "Bold, italic, headings, lists, and marked passages are saved as Markdown. Page typography and selection overrides are presentation preferences.")
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(Space.large)
+        .frame(width: 500, height: 400)
+    }
+
+    private func guideSection(_ title: String, _ detail: String) -> some View {
+        VStack(alignment: .leading, spacing: Space.tight) {
+            Text(title).font(Chrome.strong)
+            Text(detail)
+                .font(Chrome.body)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
 enum WorkspaceSheet: String, Identifiable {
     case search
     case palette
     case export
+    case guide
 
     var id: String { rawValue }
 }
@@ -313,6 +370,7 @@ enum StoryLoomCommand {
     case search
     case palette
     case export
+    case guide
 }
 
 extension Notification.Name {
@@ -339,7 +397,7 @@ private struct Banner<Actions: View>: View {
             Text(message)
                 .font(Chrome.small)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
+                .fixedSize(horizontal: false, vertical: true)
 
             Spacer(minLength: Space.small)
 
@@ -427,38 +485,38 @@ private struct WindowConfigurator: NSViewRepresentable {
         }
     }
 
-    /// A launcher is a question, not a window to arrange: fixed size, centred, and
-    /// it cannot be dragged off-centre or resized.
+    /// The launcher is compact and fixed-size, but still behaves like a Mac
+    /// window: it can be moved, minimized, and arranged by the author.
     private func lock(_ window: NSWindow) {
-        window.styleMask.remove([.resizable, .miniaturizable])
+        window.setFrameAutosaveName("")
+        window.styleMask.remove(.resizable)
+        window.styleMask.insert(.miniaturizable)
         window.contentMinSize = dialogSize
         window.contentMaxSize = dialogSize
         window.setContentSize(dialogSize)
-        window.isMovable = false
-        window.isMovableByWindowBackground = false
+        window.isMovable = true
+        window.isMovableByWindowBackground = true
         window.center()
     }
 
-    /// The book gets the whole screen. Arriving from a 520pt dialog into a merely
-    /// adequate window reads as the application having failed to open properly.
+    /// Restore the author's last workspace frame. On first use, open generously
+    /// without taking over the whole display or repeatedly overriding placement.
     private func unlock(_ window: NSWindow) {
         window.styleMask.insert([.resizable, .miniaturizable])
-        window.contentMinSize = NSSize(width: 900, height: 620)
+        window.contentMinSize = NSSize(width: 760, height: 520)
         window.contentMaxSize = NSSize(width: CGFloat.greatestFiniteMagnitude,
                                        height: CGFloat.greatestFiniteMagnitude)
         window.isMovable = true
+        window.isMovableByWindowBackground = false
 
         guard let screen = window.screen ?? NSScreen.main else { return }
-        let full = screen.visibleFrame
-        window.setFrame(full, display: true, animate: true)
-        // SwiftUI sizes the window from its content after this pass and pulls it
-        // back to the split view's ideal width. Re-assert until it stops.
-        for delay in [0.05, 0.25, 0.6] {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                if window.frame.width < full.width - 1 || window.frame.height < full.height - 1 {
-                    window.setFrame(full, display: true, animate: false)
-                }
-            }
+        let frameName = "StoryLoom.MainWindow"
+        window.setFrameAutosaveName(frameName)
+        if !window.setFrameUsingName(frameName) {
+            let visible = screen.visibleFrame
+            let size = NSSize(width: min(1240, visible.width * 0.88), height: min(820, visible.height * 0.88))
+            let origin = NSPoint(x: visible.midX - size.width / 2, y: visible.midY - size.height / 2)
+            window.setFrame(NSRect(origin: origin, size: size), display: true, animate: true)
         }
     }
 }

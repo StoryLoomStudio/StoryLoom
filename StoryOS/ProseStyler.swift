@@ -97,6 +97,9 @@ nonisolated struct ProseStyle: Equatable, Sendable {
     var pageColor: NSColor { theme.pageColor(for: pageAppearance) }
     var inkColor: NSColor { theme.inkColor(for: pageAppearance) }
     var mutedColor: NSColor { theme.mutedInkColor(for: pageAppearance) }
+    var focusMutedColor: NSColor {
+        inkColor.blended(withFraction: 0.32, of: pageColor) ?? inkColor
+    }
     var caretColor: NSColor { theme.caretColor(for: pageAppearance) }
 
     var bodyFont: NSFont { face.font(size: size) }

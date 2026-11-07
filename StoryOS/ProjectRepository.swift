@@ -12,6 +12,28 @@
 //  a text editor, adds a field this version has never heard of, saving must not
 //  eat it.
 //
+//  THE OUTLINE IS THE FOLDER
+//
+//  `manuscript/` used to be a flat heap of numbered Markdown, with the shape of
+//  the book held separately in `story/binder.json` as a tree of names, nesting
+//  and ids. Two indexes of one structure, and only one of them was visible to
+//  the author: opening the project in the Finder showed four hundred files in a
+//  row, and a Part that existed only inside a JSON file the format promised
+//  nobody would have to read.
+//
+//  So the directory *is* the outline. A group is a real directory, nesting is
+//  real nesting, and reading order is a zero-padded number on the front of every
+//  entry — files and directories share one counter, so sorting a folder by name
+//  is the manuscript's order. An empty Part is an empty directory, which is
+//  exactly the thing the old derived outline could not represent and the thing
+//  a binder exists to give an author.
+//
+//  What is left in `story/binder.json` is the one fact a directory cannot state
+//  about itself: whether it is a Volume, a Part, a Chapter, or just a folder. A
+//  path this index has never heard of — a directory made in the Finder, a branch
+//  merged in, a folder renamed while the app was shut — is a Folder, which is
+//  the honest answer and never a wrong one.
+//
 
 import CryptoKit
 import Foundation
@@ -26,7 +48,22 @@ import Foundation
 /// still lying there, and a second load would take them in all over again.
 nonisolated struct ProjectLoad: Sendable {
     var project: StoryProject
+    var presentation: [UUID: PresentationLayer] = [:]
     var adopted: [String] = []
+    /// The directories this load read the outline out of.
+    ///
+    /// The same debt as `adopted`, owed for the same reason. A directory the
+    /// author made in the Finder becomes a group of the outline, and the next
+    /// save writes it again under a numbered name — at which point the original
+    /// is an empty duplicate that would come back as a second, identical folder
+    /// on the next load. The save is allowed to tidy those away *because* this
+    /// load turned them into something. A directory nobody has read yet is
+    /// nobody's to delete: it might have been made a second ago, by an author
+    /// who is about to put something in it.
+    var directories: [String] = []
+    /// Recoverable auxiliary-file problems. The manuscript still opens and the
+    /// author gets one actionable notice instead of a blank workspace.
+    var warnings: [String] = []
 }
 
 actor LocalProjectRepository {
@@ -91,64 +128,183 @@ actor LocalProjectRepository {
             throw ProjectRepositoryError.unsupportedFormatVersion(manifest.formatVersion)
         }
 
-        var documents = try load(entries: manifest.documents, in: projectURL)
-        let archived = try load(entries: manifest.archivedDocuments, in: projectURL)
+        // What the directories mean. Absent, unreadable, or simply behind what
+        // is on disk — none of those is an error, they only mean more of the
+        // tree reads as plain folders.
+        let index = GroupIndex.read(at: projectURL.appending(path: "story/binder.json"))
 
-        // Markdown in the folder that the manifest has never heard of.
+        // The manuscript, as the folder has it: the tree, the scenes, and any
+        // Markdown that arrived by some other route than this application.
         //
         // The project is a folder of Markdown files and StoryLoom has always
         // promised that this is a real format, not an export — so a scene that
-        // arrives by any other route than this application (dropped in from
-        // Finder, written in another editor, restored from a backup, pulled by
-        // a sync client, merged by git) is a scene, and the author will be
-        // looking for it. Until now the manifest was the only index, so those
-        // files were invisible and the next save deleted them.
+        // arrives another way (dropped in from the Finder, written in another
+        // editor, restored from a backup, pulled by a sync client, merged by
+        // git) is a scene, and the author will be looking for it. It now also
+        // appears *where they put it*, because the folder it is sitting in is a
+        // folder of the outline rather than a fact the old manifest had no way
+        // to record.
         let claimed = Set(manifest.documents.map(\.path) + manifest.archivedDocuments.map(\.path))
-        let strays = adoptStrays(in: "manuscript", of: projectURL, claimed: claimed, taken: Set(
-            (documents + archived).map(\.id)
-        ))
-        documents.append(contentsOf: strays.documents)
+        let manuscript = try readManuscript(at: projectURL, claimed: claimed, groups: index.groups)
 
-        // The same in `archive/`, where a file is just as capable of appearing
-        // and just as invisible when it does. It stays archived: something put
-        // it in the folder for archived scenes, and second-guessing that would
-        // drop it into the middle of the manuscript.
+        // `archive/` stays flat. It is a holding pen, not an outline: nothing in
+        // it has a place in the book, which is what being archived means.
+        let archived = try load(entries: manifest.archivedDocuments, in: projectURL)
         var archivedDocuments = archived
-        let archivedStrays = adoptStrays(in: "archive", of: projectURL, claimed: claimed, taken: Set(
-            (documents + archived).map(\.id)
-        ))
+        let archivedStrays = adoptStrays(
+            in: "archive",
+            of: projectURL,
+            claimed: claimed,
+            taken: Set(manuscript.documents.map(\.id) + archived.map(\.id))
+        )
         archivedDocuments.append(contentsOf: archivedStrays.documents)
 
-        let storyURL = projectURL.appending(path: "story/metadata.json")
-        let story: StoryMetadata = fileManager.fileExists(atPath: storyURL.path)
-            ? try decodeStoryMetadata(from: storyURL)
-            : StoryMetadata()
+        let storyDirectory = projectURL.appending(path: "story")
+        let storyURL = storyDirectory.appending(path: "metadata.json")
+        var warnings: [String] = []
+        let story: StoryMetadata
+        if fileManager.fileExists(atPath: storyURL.path) {
+            do {
+                story = try decodeStoryMetadata(from: storyURL)
+            } catch {
+                story = StoryMetadata()
+                warnings.append("Story records could not be read. The manuscript was opened without them; the unreadable metadata file was left untouched.")
+            }
+        } else {
+            story = StoryMetadata()
+        }
+        let presentationResult = loadPresentation(at: storyDirectory.appending(path: "presentation.json"))
+        if let warning = presentationResult.warning { warnings.append(warning) }
 
-        // The outline lives beside the metadata rather than in the manifest.
-        // The manifest is hand-written YAML meant to stay readable and diffable
-        // by a human with a text editor; a nested tree is neither, and folding
-        // one into it would make the format worse for the sake of one file.
-        // A missing or unreadable binder is not an error — the manuscript is
-        // still all there, and `StoryProject` rebuilds a tree from it.
-        let binderURL = projectURL.appending(path: "story/binder.json")
-        let binder: [BinderItem] = fileManager.fileExists(atPath: binderURL.path)
-            ? ((try? JSONDecoder().decode([BinderItem].self, from: try Data(contentsOf: binderURL))) ?? [])
-            : []
+        // A project written before the outline was the folder has every scene
+        // loose in `manuscript/` and its shape in the old tree. Read that tree
+        // one last time; the next save lays the directories down and the index
+        // is a list of types from then on. Nothing is converted on load, so a
+        // project opened and closed without being touched is left exactly as it
+        // was found.
+        let binder = manuscript.sawDirectories ? manuscript.items : (index.legacyTree ?? manuscript.items)
 
         var project = StoryProject(
             id: manifest.id,
             title: manifest.title,
-            documents: documents,
+            documents: manuscript.documents,
             story: story,
             archivedDocuments: archivedDocuments,
             binder: binder
         )
-        // An adopted file is in `documents` and in no folder of the outline,
-        // which is exactly the case `reconcile` exists for: it lands at the end,
-        // where the author can see it and move it.
-        if !strays.documents.isEmpty { project.applyBinderOrder() }
+        // Puts `documents` in the order the tree reads in, and gives a home to
+        // anything the tree has not heard of.
+        project.applyBinderOrder()
 
-        return ProjectLoad(project: project, adopted: strays.paths + archivedStrays.paths)
+        return ProjectLoad(
+            project: project,
+            presentation: presentationResult.layers,
+            adopted: manuscript.adopted + archivedStrays.paths,
+            directories: manuscript.directories,
+            warnings: warnings
+        )
+    }
+
+    /// Reads `manuscript/` as what it now is: the outline.
+    ///
+    /// Directories become groups, `.md` files become scenes, and the order is
+    /// the order the names sort in — which the numeric prefix on every entry
+    /// makes the order the author put them in.
+    ///
+    /// Every file states its own identity in its own front matter, so the
+    /// manifest is not consulted to read one. It used to be, and it used to
+    /// *refuse* a file whose id had changed underneath it, because the outline
+    /// was a separate tree of ids and a scene that swapped identity took some
+    /// other scene's place in it. The outline is these directories now. A file
+    /// is where it is, and it is whatever it says it is.
+    private func readManuscript(
+        at projectURL: URL,
+        claimed: Set<String>,
+        groups: [String: GroupKind]
+    ) throws -> (
+        items: [BinderItem],
+        documents: [StoryDocument],
+        adopted: [String],
+        directories: [String],
+        sawDirectories: Bool
+    ) {
+        var documents: [StoryDocument] = []
+        var adopted: [String] = []
+        var directories: [String] = []
+        var taken = Set<UUID>()
+
+        func walk(_ relative: String) throws -> [BinderItem] {
+            let directoryURL = projectURL.appending(path: relative)
+            let contents = try fileManager.contentsOfDirectory(
+                at: directoryURL,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            )
+
+            var items: [BinderItem] = []
+            for url in contents.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
+                let child = "\(relative)/\(url.lastPathComponent)"
+                let isDirectory = try url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory ?? false
+
+                if isDirectory {
+                    directories.append(child)
+                    items.append(
+                        BinderItem(
+                            id: Self.folderID(for: child),
+                            kind: .folder,
+                            // The one thing a directory cannot say about itself.
+                            // A path the index has never heard of is a Folder.
+                            group: groups[child] ?? .folder,
+                            name: Self.folderName(from: url.lastPathComponent),
+                            children: try walk(child)
+                        )
+                    )
+                    continue
+                }
+
+                guard url.pathExtension.lowercased() == "md" else { continue }
+                let text = try readString(url)
+
+                var document = MarkdownDocument.adopt(from: text, url: url)
+                // A file duplicated in the Finder carries the id of the scene it
+                // was copied from. Two documents with one id is the one thing
+                // the rest of the application cannot survive, and the copy is
+                // plainly meant to be a second scene — so it becomes one.
+                if taken.contains(document.id) { document.id = UUID() }
+                taken.insert(document.id)
+                documents.append(document)
+                items.append(.document(document.id))
+                if !claimed.contains(child) { adopted.append(child) }
+            }
+            return items
+        }
+
+        let items = try walk("manuscript")
+        return (items, documents, adopted, directories, !directories.isEmpty)
+    }
+
+    /// A folder's identity, derived from where it is.
+    ///
+    /// The outline is the filesystem now, and a directory has nowhere to keep a
+    /// UUID that would not be litter in a folder the author is meant to open.
+    /// Hashing the path gives an id that is the same on every load, which is all
+    /// anything needs it for — selection, expansion, the row being dragged. A
+    /// folder renamed outside the app gets a new one, and the only thing it
+    /// costs is that it is no longer the row that happened to be selected.
+    private static func folderID(for path: String) -> UUID {
+        var hasher = SHA256()
+        hasher.update(data: Data(path.utf8))
+        let d = Array(hasher.finalize().prefix(16))
+        return UUID(uuid: (d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7],
+                           d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15]))
+    }
+
+    /// `003-Part One` is Part One. The number is ordering, not name.
+    private static func folderName(from component: String) -> String {
+        var name = component
+        name.replace(/^\d+[-_ ]+/, with: "")
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        return trimmed.isEmpty ? component : trimmed
     }
 
     /// Every `.md` file in a directory that the manifest does not account for,
@@ -229,36 +385,57 @@ actor LocalProjectRepository {
     /// leaving them would mean the next load adopted them again, and the one
     /// after that, until a folder of five scenes opened as fifty. So a save is
     /// where an adopted file stops being a stray and becomes a scene.
-    func save(_ project: StoryProject, to projectURL: URL, claiming adopted: Set<String> = []) throws {
+    func save(
+        _ project: StoryProject,
+        to projectURL: URL,
+        presentation: [UUID: PresentationLayer] = [:],
+        claiming adopted: Set<String> = [],
+        directories claimedDirectories: Set<String> = [],
+        expectedFingerprint: String? = nil
+    ) throws {
+        if let expectedFingerprint {
+            let actual = fingerprint(at: projectURL)
+            guard actual == expectedFingerprint else {
+                throw ProjectRepositoryError.projectChangedOnDisk
+            }
+        }
         let revision = UUID()
         try journal(projectURL, event: "begin", revision: revision, detail: "\(project.documents.count) documents")
 
         // What the last save put on disk, plus what this session took in. Only
-        // those files may be cleaned up — see `write(_:into:of:ours:)`.
+        // those may be cleaned up — see `sweep(_:of:ours:keeping:)`.
         let manifestURL = resolveManifest(in: projectURL)
         let previous = (try? readString(manifestURL)).flatMap { try? ProjectManifest.decode(from: $0) }
+        let storyURL = projectURL.appending(path: "story")
+        let previousIndex = GroupIndex.read(at: storyURL.appending(path: "binder.json"))
         let ours = Set((previous?.documents ?? []).map(\.path) + (previous?.archivedDocuments ?? []).map(\.path))
             .union(adopted)
+        // Directories we are allowed to tidy away once they are empty: the ones
+        // the last index named, the ones an adopted file was sitting in, and the
+        // ones the load read the outline out of. A directory none of the three
+        // has heard of was made after this session last looked, and an author
+        // who has just made a folder is usually about to put something in it.
+        let ourDirectories = Set(previousIndex.groups.keys)
+            .union(adopted.flatMap(Self.ancestors(of:)))
+            .union(claimedDirectories)
 
         do {
-            let entries = try write(project.documents, into: "manuscript", of: projectURL, ours: ours)
-            let archived = try write(project.archivedDocuments, into: "archive", of: projectURL, ours: ours)
+            let manuscript = try writeManuscript(project, to: projectURL, ours: ours, ourDirectories: ourDirectories)
+            let archived = try writeFlat(project.archivedDocuments, into: "archive", of: projectURL, ours: ours)
 
             let manifest = ProjectManifest(
                 id: project.id,
                 title: project.title,
-                documents: entries,
+                documents: manuscript.entries,
                 archivedDocuments: archived
             )
             try atomicWrite(Data(manifest.encode().utf8), to: projectURL.appending(path: Self.manifestFileName))
 
-            let storyURL = projectURL.appending(path: "story")
             try fileManager.createDirectory(at: storyURL, withIntermediateDirectories: true)
             try atomicWrite(try encodeStoryMetadata(project.story), to: storyURL.appending(path: "metadata.json"))
-
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            try atomicWrite(try encoder.encode(project.binder), to: storyURL.appending(path: "binder.json"))
+            try atomicWrite(GroupIndex(groups: manuscript.groups).encode(), to: storyURL.appending(path: "binder.json"))
+            try atomicWrite(try encodePresentation(presentation), to: storyURL.appending(path: "presentation.json"))
+            try writeAICoauthorFiles(to: projectURL)
 
             try journal(projectURL, event: "commit", revision: revision, detail: fingerprint(at: projectURL))
         } catch {
@@ -267,7 +444,123 @@ actor LocalProjectRepository {
         }
     }
 
-    private func write(
+    /// Lays the outline down as directories and Markdown.
+    ///
+    /// Files and directories share one counter per level, so sorting any folder
+    /// of the manuscript by name gives the order the author reads it in. A group
+    /// keeps the author's own name, capitals, spaces and all — a scene can be
+    /// slugged because its title is safe in its front matter, and a directory's
+    /// name is the only place a group's name exists.
+    private func writeManuscript(
+        _ project: StoryProject,
+        to projectURL: URL,
+        ours: Set<String>,
+        ourDirectories: Set<String>
+    ) throws -> (entries: [ProjectManifest.DocumentEntry], groups: [String: GroupKind]) {
+        let documents = Dictionary(project.documents.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+
+        var entries: [ProjectManifest.DocumentEntry] = []
+        var groups: [String: GroupKind] = [:]
+        var writtenFiles = Set<String>()
+        var writtenDirectories = Set<String>()
+
+        func write(_ items: [BinderItem], into relative: String) throws {
+            try fileManager.createDirectory(
+                at: projectURL.appending(path: relative),
+                withIntermediateDirectories: true
+            )
+
+            for (position, item) in items.enumerated() {
+                let prefix = String(format: "%03d-", position + 1)
+                switch item.kind {
+                case .folder:
+                    let child = "\(relative)/\(prefix)\(Self.safeName(item.displayName))"
+                    groups[child] = item.group
+                    writtenDirectories.insert(child)
+                    try write(item.children, into: child)
+
+                case .document:
+                    guard let document = documents[item.id] else { continue }
+                    let child = "\(relative)/\(prefix)\(slug(document.title)).md"
+                    try atomicWrite(
+                        Data(MarkdownDocument.encode(document).utf8),
+                        to: projectURL.appending(path: child)
+                    )
+                    writtenFiles.insert(child)
+                    entries.append(.init(id: document.id, path: child))
+                }
+            }
+        }
+
+        try write(project.binder, into: "manuscript")
+        sweep("manuscript", of: projectURL, ours: ours, ourDirectories: ourDirectories,
+              keepingFiles: writtenFiles, keepingDirectories: writtenDirectories)
+        return (entries, groups)
+    }
+
+    /// Clears away what this save has replaced, and nothing else.
+    ///
+    /// Reordering or renaming a scene changes its filename, and moving one
+    /// between chapters changes its directory. Without this the package slowly
+    /// fills with orphans that no manifest points at, and the "open it in a text
+    /// editor" promise degrades into a junk drawer.
+    ///
+    /// Only ever *our* orphans. An earlier version deleted every `.md` it had
+    /// not just written, which meant a file an author dropped into the folder
+    /// between two autosaves was destroyed by the next keystroke — the one
+    /// outcome a plain-text format must never have. A file is ours only if the
+    /// manifest we are replacing pointed at it, or this session adopted it;
+    /// anything else belongs to whoever put it there and is picked up as a new
+    /// scene on the next load. Directories go by the same rule, and only when
+    /// empty: a directory still holding something is holding something that is
+    /// not ours to throw away.
+    private func sweep(
+        _ directory: String,
+        of projectURL: URL,
+        ours: Set<String>,
+        ourDirectories: Set<String>,
+        keepingFiles: Set<String>,
+        keepingDirectories: Set<String>
+    ) {
+        var directories: [String] = []
+
+        func visit(_ relative: String) {
+            let contents = (try? fileManager.contentsOfDirectory(
+                at: projectURL.appending(path: relative),
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            )) ?? []
+
+            for url in contents {
+                let child = "\(relative)/\(url.lastPathComponent)"
+                let isDirectory = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
+                if isDirectory {
+                    directories.append(child)
+                    visit(child)
+                } else if url.pathExtension.lowercased() == "md",
+                          !keepingFiles.contains(child),
+                          ours.contains(child) {
+                    try? fileManager.removeItem(at: url)
+                }
+            }
+        }
+
+        visit(directory)
+
+        // Deepest first, so a chapter emptied by this sweep can be taken with
+        // the part that held it.
+        for relative in directories.sorted(by: { $0.count > $1.count }) {
+            guard !keepingDirectories.contains(relative), ourDirectories.contains(relative) else { continue }
+            let url = projectURL.appending(path: relative)
+            let remaining = (try? fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []
+            guard remaining.isEmpty else { continue }
+            try? fileManager.removeItem(at: url)
+        }
+    }
+
+    /// `archive/` has no outline, so it is written the way the whole manuscript
+    /// used to be: one flat, numbered list.
+    private func writeFlat(
         _ documents: [StoryDocument],
         into directory: String,
         of projectURL: URL,
@@ -287,16 +580,6 @@ actor LocalProjectRepository {
             entries.append(.init(id: document.id, path: relativePath))
         }
 
-        // Reordering or renaming a scene changes its filename. Without this, the
-        // package slowly fills with orphans that no manifest points at, and the
-        // "open it in a text editor" promise degrades into a junk drawer.
-        //
-        // Only ever *our* orphans. This used to delete every `.md` it had not
-        // just written, which meant a file an author dropped into the folder
-        // between two autosaves was destroyed by the next keystroke — the one
-        // outcome a plain-text format must never have. A file is ours only if
-        // the manifest we are replacing pointed at it; anything else belongs to
-        // whoever put it there and is picked up as a new scene on the next load.
         let existing = try fileManager.contentsOfDirectory(at: directoryURL, includingPropertiesForKeys: nil)
         for url in existing where url.pathExtension == "md" && !written.contains(url.lastPathComponent) {
             guard ours.contains("\(directory)/\(url.lastPathComponent)") else { continue }
@@ -304,6 +587,29 @@ actor LocalProjectRepository {
         }
 
         return entries
+    }
+
+    /// Every directory above a project-relative file path.
+    private static func ancestors(of path: String) -> [String] {
+        var components = path.split(separator: "/").map(String.init)
+        components.removeLast()
+        return components.indices.map { components[...$0].joined(separator: "/") }
+    }
+
+    /// A group's name, made safe to be a directory and no more mangled than
+    /// that. `/` is the only character a name cannot contain, and `:` is the one
+    /// the Finder still shows back to front.
+    private static func safeName(_ name: String) -> String {
+        var safe = name
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ":", with: "-")
+            .components(separatedBy: .controlCharacters).joined()
+            .trimmingCharacters(in: .whitespaces)
+        // A leading dot would hide the folder from the author, and a leading
+        // digit would be read back as an ordering prefix that was never there.
+        while safe.first == "." { safe.removeFirst() }
+        if safe.first?.isNumber == true { safe = "_" + safe }
+        return safe.isEmpty ? "untitled" : String(safe.prefix(80))
     }
 
     // MARK: - History
@@ -318,14 +624,13 @@ actor LocalProjectRepository {
             options: [.skipsHiddenFiles]
         )
         let decoder = historyDecoder()
-        return try files
+        return files
             .filter { $0.pathExtension == "json" }
-            .map { url in
-                do {
-                    return try decoder.decode(ProjectSnapshotRecord.self, from: Data(contentsOf: url))
-                } catch {
-                    throw ProjectRepositoryError.malformedSnapshot(url)
-                }
+            .compactMap { url in
+                // History is auxiliary recovery data. One damaged checkpoint
+                // must not prevent the manuscript—or the other checkpoints—from
+                // opening.
+                try? decoder.decode(ProjectSnapshotRecord.self, from: Data(contentsOf: url))
             }
             // Newest first. The id breaks a tie only so that the list is stable:
             // two save points recorded in the same millisecond have no true order,
@@ -335,15 +640,40 @@ actor LocalProjectRepository {
     }
 
     @discardableResult
-    func createSnapshot(_ project: StoryProject, to projectURL: URL, reason: String) throws -> ProjectSnapshotRecord {
+    func createSnapshot(
+        _ project: StoryProject,
+        presentation: [UUID: PresentationLayer] = [:],
+        to projectURL: URL,
+        reason: String
+    ) throws -> ProjectSnapshotRecord {
         let snapshotsURL = projectURL.appending(path: "history/snapshots")
         try fileManager.createDirectory(at: snapshotsURL, withIntermediateDirectories: true)
 
-        let record = ProjectSnapshotRecord(reason: reason, project: project)
+        let record = ProjectSnapshotRecord(reason: reason, project: project, presentation: presentation)
         let milliseconds = Int(record.createdAt.timeIntervalSince1970 * 1_000)
         let fileName = "\(milliseconds)-\(record.id.uuidString).json"
         try atomicWrite(try historyEncoder().encode(record), to: snapshotsURL.appending(path: fileName))
+        if reason == HistoryReason.autosave { try? pruneAutosaveSnapshots(at: projectURL, keeping: 144) }
         return record
+    }
+
+    /// Keep one day of continuous ten-minute autosaves. Manual, restore, and
+    /// project-creation save points are never pruned automatically.
+    private func pruneAutosaveSnapshots(at projectURL: URL, keeping limit: Int) throws {
+        let snapshotsURL = projectURL.appending(path: "history/snapshots")
+        let files = try fileManager.contentsOfDirectory(at: snapshotsURL, includingPropertiesForKeys: nil)
+        let decoder = historyDecoder()
+        let autosaves: [(url: URL, record: ProjectSnapshotRecord)] = files.compactMap { url in
+            guard url.pathExtension == "json",
+                  let data = try? Data(contentsOf: url),
+                  let record = try? decoder.decode(ProjectSnapshotRecord.self, from: data),
+                  record.reason == HistoryReason.autosave
+            else { return nil }
+            return (url, record)
+        }
+        for item in autosaves.sorted(by: { $0.record.createdAt > $1.record.createdAt }).dropFirst(limit) {
+            try fileManager.removeItem(at: item.url)
+        }
     }
 
     func deleteSnapshot(_ record: ProjectSnapshotRecord, at projectURL: URL) throws {
@@ -361,7 +691,12 @@ actor LocalProjectRepository {
     /// presenter fighting our own writes.
     func fingerprint(at projectURL: URL) -> String {
         var hasher = SHA256()
-        let canonical = [Self.manifestFileName, "story/metadata.json"]
+        let canonical = [
+            Self.manifestFileName,
+            "story/metadata.json",
+            "story/binder.json",
+            "story/presentation.json"
+        ]
 
         for relative in canonical {
             let url = projectURL.appending(path: relative)
@@ -370,17 +705,58 @@ actor LocalProjectRepository {
                 hasher.update(data: data)
             }
         }
+        // Recursive, and hashing the *path* rather than the filename: the shape
+        // of the manuscript is now the directories it is in, so a scene dragged
+        // from one chapter to another changes nothing about the file and
+        // everything about the book. The old signature could not see that move.
         for directory in ["manuscript", "archive"] {
-            let url = projectURL.appending(path: directory)
-            let contents = (try? fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []
-            for file in contents.filter({ $0.pathExtension == "md" }).sorted(by: { $0.path < $1.path }) {
-                if let data = try? Data(contentsOf: file) {
-                    hasher.update(data: Data(file.lastPathComponent.utf8))
+            for relative in markdownPaths(under: directory, of: projectURL).sorted() {
+                if let data = try? Data(contentsOf: projectURL.appending(path: relative)) {
+                    hasher.update(data: Data(relative.utf8))
                     hasher.update(data: data)
                 }
             }
         }
+        // Empty directories say something too — a Part made and not yet written
+        // into is a real part of the outline, and its arrival or removal is an
+        // external change worth noticing.
+        for relative in directoryPaths(under: "manuscript", of: projectURL).sorted() {
+            hasher.update(data: Data(relative.utf8))
+        }
         return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Every `.md` under a directory, project-relative, at any depth.
+    private func markdownPaths(under directory: String, of projectURL: URL) -> [String] {
+        var found: [String] = []
+        walk(directory, of: projectURL) { relative, isDirectory in
+            if !isDirectory, relative.lowercased().hasSuffix(".md") { found.append(relative) }
+        }
+        return found
+    }
+
+    /// Every directory under a directory, project-relative, at any depth.
+    func directoryPaths(under directory: String, of projectURL: URL) -> [String] {
+        var found: [String] = []
+        walk(directory, of: projectURL) { relative, isDirectory in
+            if isDirectory { found.append(relative) }
+        }
+        return found
+    }
+
+    private func walk(_ relative: String, of projectURL: URL, visit: (String, Bool) -> Void) {
+        let contents = (try? fileManager.contentsOfDirectory(
+            at: projectURL.appending(path: relative),
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+
+        for url in contents {
+            let child = "\(relative)/\(url.lastPathComponent)"
+            let isDirectory = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
+            visit(child, isDirectory)
+            if isDirectory { walk(child, of: projectURL, visit: visit) }
+        }
     }
 
     /// True when the journal's last entry opened a write that never committed —
@@ -441,6 +817,152 @@ actor LocalProjectRepository {
         }
     }
 
+    private struct PresentationStore: Codable {
+        static let currentFormatVersion = 1
+
+        struct Entry: Codable {
+            var documentID: UUID
+            var layer: PresentationLayer
+        }
+
+        var formatVersion: Int
+        var entries: [Entry]
+    }
+
+    private func encodePresentation(_ layers: [UUID: PresentationLayer]) throws -> Data {
+        let store = PresentationStore(
+            formatVersion: PresentationStore.currentFormatVersion,
+            entries: layers
+                .filter { !$0.value.isEmpty }
+                .map { PresentationStore.Entry(documentID: $0.key, layer: $0.value) }
+                .sorted { $0.documentID.uuidString < $1.documentID.uuidString }
+        )
+        return try historyEncoder().encode(store)
+    }
+
+    private func loadPresentation(at url: URL) -> (layers: [UUID: PresentationLayer], warning: String?) {
+        guard fileManager.fileExists(atPath: url.path) else { return ([:], nil) }
+        do {
+            let store = try historyDecoder().decode(PresentationStore.self, from: Data(contentsOf: url))
+            guard store.formatVersion <= PresentationStore.currentFormatVersion else {
+                return ([:], "Text appearance was written by a newer StoryLoom and was left untouched.")
+            }
+            return (Dictionary(uniqueKeysWithValues: store.entries.map { ($0.documentID, $0.layer) }), nil)
+        } catch {
+            return ([:], "Text appearance could not be read. The manuscript was opened and the unreadable appearance file was left untouched.")
+        }
+    }
+
+    /// Makes a project self-describing to an AI that is handed only the folder.
+    /// `AGENTS.md` is the discovery hook used by coding agents; the detailed
+    /// guide and schema live under `story/` with the metadata they explain.
+    private func writeAICoauthorFiles(to projectURL: URL) throws {
+        let storyURL = projectURL.appending(path: "story")
+        try fileManager.createDirectory(at: storyURL, withIntermediateDirectories: true)
+
+        let guide = """
+        # StoryLoom AI Co-author Guide
+
+        This is a live StoryLoom project. You may read and edit it directly while StoryLoom is open. StoryLoom automatically imports disk-only changes and asks before resolving a scene changed both in the app and on disk.
+
+        ## Start here
+
+        - Write prose in `manuscript/**/*.md`.
+        - The directory tree under `manuscript/` is the binder. Number prefixes define reading order.
+        - Edit an existing scene in place and preserve its `id` front-matter value.
+        - To add a scene, create a `.md` file in the intended folder. Plain Markdown is valid; StoryLoom will assign identity and normalized front matter when it adopts the file.
+        - Never reuse an existing scene UUID for a new file.
+
+        ## Scene front matter
+
+        StoryLoom writes a YAML front-matter block followed by ordinary Markdown prose. Supported keys:
+
+        - `id`: stable UUID; preserve it on existing scenes.
+        - `title`: scene title.
+        - `volume`, `chapter`: optional narrative labels. Folder placement is the structural source of truth.
+        - `kind`: `scene` or `note`.
+        - `status`: `outline`, `draft`, `revised`, or `done`.
+        - `pov`, `location`: free text.
+        - `targetWordCount`: non-negative integer.
+        - `intention`, `turn`, `withheld`, `residue`: private craft notes.
+        - `opens`, `advances`, `lands`: JSON-style arrays of thread UUIDs.
+
+        Unknown front-matter fields are preserved. Keep YAML at the top level unless the field is intentionally external to StoryLoom.
+
+        ## Other metadata
+
+        - `project.storyloom`: generated project manifest and path index.
+        - `story/metadata.json`: characters, locations, relationships, timeline, threads, notes, comments, and project targets.
+        - `story/binder.json`: semantic folder types (`volume`, `part`, `chapter`, `folder`); the folder tree itself owns structure and order.
+        - `story/presentation.json`: StoryLoom-managed underline, alignment, highlight, font, and size spans. Do not edit it to write prose.
+        - `story/schema.json`: machine-readable field locations and valid enum values.
+        - `archive/`: scenes intentionally outside the running manuscript.
+        - `history/` and `.storyloom/`: recovery and application bookkeeping; do not edit as part of prose generation.
+
+        ## Safe co-author workflow
+
+        1. Read the relevant scenes and `story/metadata.json` before drafting.
+        2. Change only the prose/front matter you were asked to change.
+        3. Preserve IDs and unrelated metadata.
+        4. Save complete UTF-8 files atomically when your tool supports it.
+        5. If StoryLoom reports a simultaneous-edit conflict, do not keep writing that scene until the author chooses a version.
+
+        This file is generated by StoryLoom. Put project-specific AI instructions in root `AGENTS.md` below its StoryLoom pointer, or in a separate file referenced from there.
+        """
+        try atomicWrite(Data(guide.utf8), to: storyURL.appending(path: "AI-GUIDE.md"))
+
+        let schema: [String: Any] = [
+            "formatVersion": 1,
+            "prose": [
+                "location": "manuscript/**/*.md",
+                "format": "UTF-8 Markdown with optional YAML front matter",
+                "ordering": "lexicographic path order; numeric prefixes are generated ordering"
+            ],
+            "sceneFrontMatter": [
+                "id": ["type": "uuid", "requiredForExistingScene": true],
+                "title": ["type": "string"],
+                "volume": ["type": "string"],
+                "chapter": ["type": "string"],
+                "kind": ["type": "enum", "values": DocumentKind.allCases.map(\.rawValue)],
+                "status": ["type": "enum", "values": DocumentStatus.allCases.map(\.rawValue)],
+                "pov": ["type": "string"],
+                "location": ["type": "string"],
+                "targetWordCount": ["type": "integer", "minimum": 0],
+                "intention": ["type": "string"],
+                "turn": ["type": "string"],
+                "withheld": ["type": "string"],
+                "residue": ["type": "string"],
+                "opens": ["type": "array", "items": "thread UUID"],
+                "advances": ["type": "array", "items": "thread UUID"],
+                "lands": ["type": "array", "items": "thread UUID"]
+            ],
+            "metadata": [
+                "storyRecords": "story/metadata.json",
+                "folderTypes": "story/binder.json",
+                "presentation": "story/presentation.json",
+                "manifest": "project.storyloom"
+            ],
+            "enumValues": [
+                "folderType": GroupKind.allCases.map(\.rawValue),
+                "threadKind": ThreadKind.allCases.map(\.rawValue),
+                "entityKind": EntityKind.allCases.map(\.rawValue)
+            ]
+        ]
+        let schemaData = try JSONSerialization.data(withJSONObject: schema, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
+        try atomicWrite(schemaData + Data("\n".utf8), to: storyURL.appending(path: "schema.json"))
+
+        let agentsURL = projectURL.appending(path: "AGENTS.md")
+        if !fileManager.fileExists(atPath: agentsURL.path) {
+            let pointer = """
+            # StoryLoom co-author project
+
+            Read `story/AI-GUIDE.md` and `story/schema.json` before editing. Prose lives in `manuscript/**/*.md`; preserve existing scene UUIDs and unrelated front matter.
+
+            """
+            try atomicWrite(Data(pointer.utf8), to: agentsURL)
+        }
+    }
+
     private func historyEncoder() -> JSONEncoder {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
@@ -491,6 +1013,7 @@ enum ProjectRepositoryError: LocalizedError {
     case malformedManifest
     case malformedDocument(URL?)
     case identityMismatch(URL?)
+    case projectChangedOnDisk
 
     var errorDescription: String? {
         switch self {
@@ -514,7 +1037,74 @@ enum ProjectRepositoryError: LocalizedError {
             "A scene could not be read\(url.map { ": \($0.lastPathComponent)" } ?? "")."
         case .identityMismatch(let url):
             "A scene's id does not match the manifest\(url.map { ": \($0.lastPathComponent)" } ?? "")."
+        case .projectChangedOnDisk:
+            "The project changed on disk before StoryLoom could save. The new prose is being synchronized first."
         }
+    }
+}
+
+// MARK: - Group index
+
+/// What each directory under `manuscript/` is.
+///
+/// This is the whole of `story/binder.json` now. It used to hold the outline —
+/// names, nesting, ids, order, the lot — and the outline is the directory tree
+/// itself, so what is left is the one fact a directory cannot state about
+/// itself: whether it is a Volume, a Part, a Chapter, or just a folder.
+///
+/// Keyed by project-relative path, which means it falls behind the moment
+/// somebody renames or moves a directory while the application is not looking.
+/// That is the design and it costs exactly one thing: that directory reads as a
+/// Folder until its type is set again, which is the answer that is never wrong
+/// about a folder nobody has said anything about. An index that could not fall
+/// behind would have to be a marker file inside every one of the author's
+/// directories, and this format does not litter a folder it asks people to open.
+private struct GroupIndex {
+    nonisolated static let currentFormatVersion = 2
+
+    var groups: [String: GroupKind] = [:]
+
+    /// The outline as a project written before the folder held it. Present only
+    /// on the load that finds one; the next save replaces the file with types.
+    var legacyTree: [BinderItem]?
+
+    nonisolated init(groups: [String: GroupKind] = [:], legacyTree: [BinderItem]? = nil) {
+        self.groups = groups
+        self.legacyTree = legacyTree
+    }
+
+    /// `nonisolated`, or its `Codable` conformance is main-actor bound and
+    /// cannot be used from the reading and writing below — a warning today and
+    /// an error under the Swift 6 language mode.
+    nonisolated private struct Stored: Codable {
+        var formatVersion: Int
+        var groups: [String: String]
+    }
+
+    nonisolated func encode() throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        return try encoder.encode(
+            Stored(
+                formatVersion: Self.currentFormatVersion,
+                groups: groups.mapValues(\.rawValue)
+            )
+        )
+    }
+
+    /// Missing, unreadable, or written by a StoryLoom that kept the whole tree
+    /// here — none of the three is an error. The manuscript is on disk either
+    /// way, and the worst case is a tree of plain folders.
+    nonisolated static func read(at url: URL) -> GroupIndex {
+        guard let data = try? Data(contentsOf: url) else { return GroupIndex() }
+
+        if let stored = try? JSONDecoder().decode(Stored.self, from: data) {
+            return GroupIndex(groups: stored.groups.compactMapValues(GroupKind.init(rawValue:)))
+        }
+        if let tree = try? JSONDecoder().decode([BinderItem].self, from: data) {
+            return GroupIndex(legacyTree: tree)
+        }
+        return GroupIndex()
     }
 }
 
@@ -656,6 +1246,7 @@ private enum MarkdownDocument {
     /// matter is somebody else's, and is written back out untouched.
     nonisolated static let knownKeys: Set<String> = [
         "id", "title", "volume", "chapter", "kind", "status", "pov", "location",
+        "targetWordCount",
         "intention", "turn", "withheld", "residue",
         "opens", "advances", "lands"
     ]
@@ -671,6 +1262,7 @@ private enum MarkdownDocument {
             "status: \(YAML.scalar(document.status.rawValue))",
             "pov: \(YAML.scalar(document.pov))",
             "location: \(YAML.scalar(document.location))",
+            "targetWordCount: \(max(0, document.targetWordCount))",
             "intention: \(YAML.scalar(document.intention))",
             "turn: \(YAML.scalar(document.turn))",
             "withheld: \(YAML.scalar(document.withheld))",
@@ -792,6 +1384,7 @@ private enum MarkdownDocument {
             status: values["status"].flatMap(DocumentStatus.init(rawValue:)) ?? .draft,
             pov: values["pov"] ?? "",
             location: values["location"] ?? "",
+            targetWordCount: values["targetWordCount"].flatMap(Int.init).map { max(0, $0) } ?? 500,
             preservedFrontMatter: preserved
         )
     }

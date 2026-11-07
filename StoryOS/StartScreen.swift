@@ -259,7 +259,7 @@ private struct RecentRow: View {
                     .lineLimit(1)
                 Text(entry.url.deletingLastPathComponent().path.abbreviatingHome)
                     .font(Chrome.small)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.head)
             }
