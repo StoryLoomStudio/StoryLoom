@@ -7,6 +7,13 @@
 	this file at build time. Do not add those here by hand; they would go stale
 	against the build settings that are the real source of truth.
 
+	The Debug build ("StoryLoom Dev", io.storyloom.dev) declares the same
+	document and exported types as the release app, because the identifiers are
+	referenced from code and a copy under another name would be a different
+	type. It differs only in STORYLOOM_HANDLER_RANK (None in Debug, Owner in
+	Release), so a development build never competes for double-clicks on
+	project.storyloom.
+
 	What lives here is only what a build setting cannot express: the nested
 	document-type and exported-UTI declarations.
 
@@ -65,7 +72,7 @@
 				<string>io.storyloom.project</string>
 			</array>
 			<key>LSHandlerRank</key>
-			<string>Owner</string>
+			<string>$(STORYLOOM_HANDLER_RANK)</string>
 		</dict>
 	</array>
 </dict>

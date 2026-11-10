@@ -85,8 +85,9 @@ struct PersistenceAndCoauthorTests {
         ))
         created.project.binder = StoryProject.binder(from: created.project.documents)
         try await repository.save(created.project, to: root)
-        let defaults = try #require(UserDefaults(suiteName: "StoryLoomTests.\(UUID().uuidString)"))
-        let workspace = WorkspaceModel(repository: repository, recents: RecentProjects(defaults: defaults))
+        let isolated = IsolatedDefaults()
+        defer { isolated.cleanUp() }
+        let workspace = WorkspaceModel(repository: repository, recents: RecentProjects(defaults: isolated.defaults))
         workspace.open(root)
         try await waitUntil("initial project open") { workspace.hasProject && workspace.persistence == .saved }
         let sceneURL = try #require(firstMarkdownFile(in: root))

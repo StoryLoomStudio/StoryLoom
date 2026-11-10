@@ -67,7 +67,7 @@ struct WorkspaceView: View {
         }
         .onAppear {
             workspace.undoManager = undoManager
-            workspace.resumeLastSession(enabled: settings.reopensLastProject)
+            workspace.resumeLastSession(enabled: settings.reopensLastProject && !AppEnvironment.isRunningTests)
         }
         .onChange(of: undoManager) { _, manager in
             workspace.undoManager = manager

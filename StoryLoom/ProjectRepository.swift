@@ -37,6 +37,7 @@
 
 import CryptoKit
 import Foundation
+import OSLog
 
 /// A project, and what had to be taken in from the folder to assemble it.
 ///
@@ -439,7 +440,12 @@ actor LocalProjectRepository {
 
             try journal(projectURL, event: "commit", revision: revision, detail: fingerprint(at: projectURL))
         } catch {
-            try? journal(projectURL, event: "failed", revision: revision, detail: error.localizedDescription)
+            Log.persistence.error("Save failed: \(error.localizedDescription, privacy: .public)")
+            do {
+                try journal(projectURL, event: "failed", revision: revision, detail: error.localizedDescription)
+            } catch {
+                Log.persistence.error("Journal write failed: \(error.localizedDescription, privacy: .public)")
+            }
             throw error
         }
     }
@@ -540,7 +546,7 @@ actor LocalProjectRepository {
                 } else if url.pathExtension.lowercased() == "md",
                           !keepingFiles.contains(child),
                           ours.contains(child) {
-                    try? fileManager.removeItem(at: url)
+                    remove(url)
                 }
             }
         }
@@ -554,7 +560,7 @@ actor LocalProjectRepository {
             let url = projectURL.appending(path: relative)
             let remaining = (try? fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []
             guard remaining.isEmpty else { continue }
-            try? fileManager.removeItem(at: url)
+            remove(url)
         }
     }
 
@@ -583,7 +589,7 @@ actor LocalProjectRepository {
         let existing = try fileManager.contentsOfDirectory(at: directoryURL, includingPropertiesForKeys: nil)
         for url in existing where url.pathExtension == "md" && !written.contains(url.lastPathComponent) {
             guard ours.contains("\(directory)/\(url.lastPathComponent)") else { continue }
-            try? fileManager.removeItem(at: url)
+            remove(url)
         }
 
         return entries
@@ -653,7 +659,11 @@ actor LocalProjectRepository {
         let milliseconds = Int(record.createdAt.timeIntervalSince1970 * 1_000)
         let fileName = "\(milliseconds)-\(record.id.uuidString).json"
         try atomicWrite(try historyEncoder().encode(record), to: snapshotsURL.appending(path: fileName))
-        if reason == HistoryReason.autosave { try? pruneAutosaveSnapshots(at: projectURL, keeping: 144) }
+        if reason == HistoryReason.autosave {
+            do { try pruneAutosaveSnapshots(at: projectURL, keeping: 144) } catch {
+                Log.history.error("Pruning save points failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
         return record
     }
 
@@ -793,6 +803,14 @@ actor LocalProjectRepository {
         try handle.seekToEnd()
         try handle.write(contentsOf: line + Data("\n".utf8))
         try handle.synchronize()
+    }
+
+    /// Removes a file the sweep decided it owns. Failure is logged, not thrown:
+    /// a leftover file is harmless, a failed save is not.
+    private func remove(_ url: URL) {
+        do { try fileManager.removeItem(at: url) } catch {
+            Log.persistence.error("Could not remove \(url.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     // MARK: - Encoding helpers
