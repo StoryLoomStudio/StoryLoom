@@ -77,7 +77,9 @@ nonisolated struct TextAnchor: Codable, Hashable, Sendable {
         if candidates.count == 1 {
             return candidates[0]
         }
-        return candidates.max { score(for: $0, in: ns) < score(for: $1, in: ns) }
+        let ranked = candidates.map { ($0, score(for: $0, in: ns)) }.sorted { $0.1 > $1.1 }
+        guard ranked[0].1 - ranked[1].1 > 0.000_001 else { return nil }
+        return ranked[0].0
     }
 
     /// Whether the anchor still finds its text. Orphans are shown for repair.
@@ -123,37 +125,50 @@ nonisolated struct TextAnchor: Codable, Hashable, Sendable {
         let needle = TextAnchor.collapseWhitespace(quote)
         guard needle.count >= 8 else { return nil }
 
-        var collapsed = ""
-        var utf16Offsets: [Int] = []   // one entry per Character in `collapsed`
+        var collapsedCharacters: [Character] = []
+        var starts: [Int] = []
+        var ends: [Int] = []
         var offset = 0
         var lastWasSpace = false
 
         for character in text {
+            let width = character.utf16.count
             if character.isWhitespace {
-                if !lastWasSpace, !collapsed.isEmpty {
-                    collapsed.append(" ")
-                    utf16Offsets.append(offset)
+                if lastWasSpace, !ends.isEmpty {
+                    ends[ends.count - 1] = offset + width
+                } else if !collapsedCharacters.isEmpty {
+                    collapsedCharacters.append(" ")
+                    starts.append(offset)
+                    ends.append(offset + width)
                 }
                 lastWasSpace = true
             } else {
-                collapsed.append(character)
-                utf16Offsets.append(offset)
+                collapsedCharacters.append(character)
+                starts.append(offset)
+                ends.append(offset + width)
                 lastWasSpace = false
             }
-            offset += character.utf16.count
+            offset += width
         }
 
-        guard let match = collapsed.range(of: needle) else { return nil }
-        let first = collapsed.distance(from: collapsed.startIndex, to: match.lowerBound)
-        let last = collapsed.distance(from: collapsed.startIndex, to: match.upperBound) - 1
-        guard first >= 0, last >= first, last < utf16Offsets.count else { return nil }
-
-        // `collapseWhitespace` never produces a leading or trailing space, so the
-        // final matched Character is always real text and its width is its own.
-        let lastCharacter = collapsed[collapsed.index(collapsed.startIndex, offsetBy: last)]
-        let start = utf16Offsets[first]
-        let end = utf16Offsets[last] + lastCharacter.utf16.count
-        return NSRange(location: start, length: end - start)
+        let collapsed = String(collapsedCharacters)
+        var candidates: [NSRange] = []
+        var searchStart = collapsed.startIndex
+        while searchStart < collapsed.endIndex,
+              let match = collapsed.range(of: needle, options: [.literal], range: searchStart..<collapsed.endIndex) {
+            let first = collapsed.distance(from: collapsed.startIndex, to: match.lowerBound)
+            let last = collapsed.distance(from: collapsed.startIndex, to: match.upperBound) - 1
+            if first >= 0, last >= first, last < starts.count {
+                let start = starts[first]
+                candidates.append(NSRange(location: start, length: ends[last] - start))
+            }
+            searchStart = collapsed.index(after: match.lowerBound)
+        }
+        guard !candidates.isEmpty else { return nil }
+        let ranked = candidates.map { ($0, score(for: $0, in: text as NSString)) }
+            .sorted { $0.1 > $1.1 }
+        guard ranked.count == 1 || ranked[0].1 - ranked[1].1 > 0.000_001 else { return nil }
+        return ranked[0].0
     }
 
     private nonisolated static func collapseWhitespace(_ value: String) -> String {

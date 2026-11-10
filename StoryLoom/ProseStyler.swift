@@ -285,7 +285,8 @@ nonisolated enum ProseStyler {
         range: NSRange,
         style: ProseStyle,
         presentation: PresentationLayer = PresentationLayer(),
-        wrapInEditing: Bool = true
+        wrapInEditing: Bool = true,
+        precomputedBlocks: [MarkdownBlock]? = nil
     ) {
         let text = storage.string as NSString
         let safe = range.clamped(to: text.length)
@@ -299,7 +300,8 @@ nonisolated enum ProseStyler {
         // inside something larger — a list, a fenced block, a table. Those come
         // back whole, and the repaint has to cover whatever came back or a
         // half-restyled construct keeps the attributes of the shape it used to be.
-        let blocks = DocumentAST.parse(storage.string, scopedRanges: [safe], registry: .manuscript)
+        let blocks = DocumentAST.parse(storage.string, scopedRanges: [safe], precomputedBlocks: precomputedBlocks,
+                                       registry: .manuscript)
         var effective = safe
         for block in blocks { effective = NSUnionRange(effective, block.range) }
         effective = effective.clamped(to: text.length)

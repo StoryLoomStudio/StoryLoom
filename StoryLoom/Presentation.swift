@@ -159,52 +159,75 @@ nonisolated struct PresentationLayer: Codable, Equatable, Sendable {
     /// about *that* attribute and leaving what they said about the others.
     mutating func setRun(_ range: NSRange, in text: String, _ change: (inout PresentationRun) -> Void) {
         guard range.length > 0 else { return }
-        var carved: [PresentationRun] = []
+        let ns = text as NSString
+        let target = range.clamped(to: ns.length)
+        guard target.length > 0 else { return }
+        var result = runs.filter { NSIntersectionRange($0.range, target).length == 0 }
 
-        for run in runs {
-            let overlap = NSIntersectionRange(run.range, range)
-            guard overlap.length > 0 else { carved.append(run); continue }
-            // Keep the parts of the old run that fall outside the new range.
-            if run.range.location < range.location {
-                var head = run
-                head.id = UUID()
-                head.range = NSRange(location: run.range.location, length: range.location - run.range.location)
-                head.anchor = TextAnchor.make(in: text, range: head.range)
-                carved.append(head)
+        for run in runs where NSIntersectionRange(run.range, target).length > 0 {
+            let overlap = NSIntersectionRange(run.range, target)
+            if run.location < overlap.location {
+                result.append(Self.copy(run, in: NSRange(location: run.location, length: overlap.location - run.location), text: text))
             }
-            if NSMaxRange(run.range) > NSMaxRange(range) {
-                var tail = run
-                tail.id = UUID()
-                tail.range = NSRange(location: NSMaxRange(range), length: NSMaxRange(run.range) - NSMaxRange(range))
-                tail.anchor = TextAnchor.make(in: text, range: tail.range)
-                carved.append(tail)
+            if NSMaxRange(overlap) < NSMaxRange(run.range) {
+                result.append(Self.copy(run, in: NSRange(location: NSMaxRange(overlap), length: NSMaxRange(run.range) - NSMaxRange(overlap)), text: text))
             }
         }
 
-        // The attributes already covering the range are inherited, so setting a
-        // colour does not erase an underline underneath it.
-        var fresh = runs.first { NSIntersectionRange($0.range, range).length > 0 }
-            ?? PresentationRun(location: range.location, length: range.length,
-                               anchor: TextAnchor.make(in: text, range: range))
-        fresh.id = UUID()
-        fresh.range = range
-        fresh.anchor = TextAnchor.make(in: text, range: range)
-        change(&fresh)
-
-        carved.append(fresh)
-        runs = carved.filter { !$0.isEmpty }.sorted { $0.location < $1.location }
+        // Split at every existing style boundary. Each segment inherits its own
+        // attributes, so changing font or colour cannot flatten neighbouring runs.
+        var boundaries: Set<Int> = [target.location, NSMaxRange(target)]
+        for run in runs {
+            let overlap = NSIntersectionRange(run.range, target)
+            if overlap.length > 0 {
+                boundaries.insert(overlap.location)
+                boundaries.insert(NSMaxRange(overlap))
+            }
+        }
+        let ordered = boundaries.sorted()
+        for (start, end) in zip(ordered, ordered.dropFirst()) where end > start {
+            let segment = NSRange(location: start, length: end - start)
+            var updated = runs.first(where: { NSLocationInRange(start, $0.range) })
+                .map { Self.copy($0, in: segment, text: text) }
+                ?? PresentationRun(location: start, length: end - start, anchor: TextAnchor.make(in: text, range: segment))
+            change(&updated)
+            result.append(updated)
+        }
+        runs = result.filter { !$0.isEmpty }.sorted { $0.location < $1.location }
     }
 
     mutating func setAlignment(_ alignment: TextAlignmentChoice?, over range: NSRange, in text: String) {
-        let paragraphs = (text as NSString).paragraphRange(for: range)
-        blocks.removeAll { NSIntersectionRange($0.range, paragraphs).length > 0 }
+        let ns = text as NSString
+        let paragraphs = ns.paragraphRange(for: range.clamped(to: ns.length))
+        guard paragraphs.length > 0 else { return }
+        var kept: [PresentationBlock] = []
+        for block in blocks {
+            let overlap = NSIntersectionRange(block.range, paragraphs)
+            guard overlap.length > 0 else { kept.append(block); continue }
+            if block.location < overlap.location {
+                var head = block
+                head.id = UUID()
+                head.range = NSRange(location: block.location, length: overlap.location - block.location)
+                head.anchor = TextAnchor.make(in: text, range: head.range)
+                kept.append(head)
+            }
+            if NSMaxRange(overlap) < NSMaxRange(block.range) {
+                var tail = block
+                tail.id = UUID()
+                tail.range = NSRange(location: NSMaxRange(overlap), length: NSMaxRange(block.range) - NSMaxRange(overlap))
+                tail.anchor = TextAnchor.make(in: text, range: tail.range)
+                kept.append(tail)
+            }
+        }
+        blocks = kept
         guard let alignment, alignment != .natural else { return }
-        blocks.append(PresentationBlock(
+        kept.append(PresentationBlock(
             location: paragraphs.location,
             length: paragraphs.length,
             anchor: TextAnchor.make(in: text, range: paragraphs),
             alignment: alignment
         ))
+        blocks = kept
         blocks.sort { $0.location < $1.location }
     }
 
@@ -227,7 +250,7 @@ nonisolated struct PresentationLayer: Codable, Equatable, Sendable {
     /// Move every span through an edit, exactly as an attributed string moves its
     /// own attributes. This is why there is no drift while the author is typing:
     /// nothing is searched for, it is arithmetic on a known edit.
-    mutating func adjust(editedRange: NSRange, delta: Int) {
+    mutating func adjust(editedRange: NSRange, delta: Int, in text: String) {
         let changeStart = editedRange.location
         let oldLength = editedRange.length - delta
 
@@ -256,14 +279,24 @@ nonisolated struct PresentationLayer: Codable, Equatable, Sendable {
             guard let moved = shift(run.range) else { return nil }
             var copy = run
             copy.range = moved
+            copy.anchor = TextAnchor.make(in: text, range: moved)
             return copy
         }
         blocks = blocks.compactMap { block in
             guard let moved = shift(block.range) else { return nil }
             var copy = block
             copy.range = moved
+            copy.anchor = TextAnchor.make(in: text, range: moved)
             return copy
         }
+    }
+
+    private static func copy(_ run: PresentationRun, in range: NSRange, text: String) -> PresentationRun {
+        var copy = run
+        if range != run.range { copy.id = UUID() }
+        copy.range = range
+        copy.anchor = TextAnchor.make(in: text, range: range)
+        return copy
     }
 
     /// Re-find every span in `text` after loading it from disk, where the offsets
@@ -275,20 +308,24 @@ nonisolated struct PresentationLayer: Codable, Equatable, Sendable {
             var copy = run
             if run.range.location + run.range.length <= length,
                (text as NSString).substring(with: run.range) == run.anchor.quote {
-                return copy                              // offsets still true
+                copy.anchor = TextAnchor.make(in: text, range: run.range)
+                return copy
             }
             guard let found = run.anchor.resolve(in: text) else { return nil }
             copy.range = found
+            copy.anchor = TextAnchor.make(in: text, range: found)
             return copy
         }
         blocks = blocks.compactMap { block in
             var copy = block
             if block.range.location + block.range.length <= length,
                (text as NSString).substring(with: block.range) == block.anchor.quote {
+                copy.anchor = TextAnchor.make(in: text, range: block.range)
                 return copy
             }
             guard let found = block.anchor.resolve(in: text) else { return nil }
             copy.range = found
+            copy.anchor = TextAnchor.make(in: text, range: found)
             return copy
         }
     }

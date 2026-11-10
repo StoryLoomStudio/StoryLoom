@@ -442,7 +442,10 @@ struct EditorCanvas: View {
                     onFormat: { workspace.toggleFormat($0) },
                     onCreateRecord: { workspace.createEntity(kind: .character, name: $0) },
                     presentation: workspace.selectedPresentation,
-                    onPresentationChange: { workspace.updatePresentation($0) }
+                    onPresentationChange: { workspace.updatePresentation($1, for: $0) },
+                    onPresentationEdit: { workspace.editPresentation(documentID: $0, before: $1, after: $2) },
+                    onCommandConsumed: { workspace.consumeEditorCommand($0) },
+                    onRevealConsumed: { workspace.consumeReveal($0) }
                 )
 
                 if document.isEmpty {
@@ -662,7 +665,8 @@ private struct FormatBar: View {
                 FormatButton(glyph: InlineFormat.emphasis.glyph, help: "Italic (⌘I)",
                              isActive: active.contains(.emphasis)) { workspace.toggleFormat(.emphasis) }
                 FormatButton(glyph: .underline, help: "Underline (⌘U)",
-                             isActive: worn.underline) { workspace.toggleUnderline() }
+                             isActive: worn.underline,
+                             isEnabled: !workspace.editorSelection.isEmpty) { workspace.toggleUnderline() }
                 FormatButton(glyph: InlineFormat.strikethrough.glyph, help: "Strikethrough (⇧⌘X)",
                              isActive: active.contains(.strikethrough)) { workspace.toggleFormat(.strikethrough) }
 
@@ -711,9 +715,11 @@ private struct FormatBar: View {
                     Divider()
                     ForEach(HighlightColour.allCases) { colour in
                         Button(colour.title) { workspace.setHighlightColour(colour) }
+                            .disabled(workspace.editorSelection.isEmpty)
                     }
                     Divider()
                     Button("None") { workspace.setHighlightColour(nil) }
+                        .disabled(workspace.editorSelection.isEmpty)
                 } label: {
                     Label("Highlight", systemImage: "highlighter")
                         .foregroundStyle(worn.highlight?.swatch ?? Color.secondary)
@@ -745,6 +751,7 @@ private struct FormatBar: View {
                 .menuIndicator(.hidden)
                 .fixedSize()
                 .help("Selection-specific font and size")
+                .disabled(workspace.editorSelection.isEmpty)
 
                 FormatButton(glyph: .comment, help: "Add comment (⌥⌘C)",
                              isEnabled: !workspace.editorSelection.isEmpty) {

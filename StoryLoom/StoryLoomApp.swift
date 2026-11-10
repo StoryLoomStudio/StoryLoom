@@ -137,7 +137,7 @@ struct AppCommands: Commands {
 
             Button("Underline") { workspace.toggleUnderline() }
                 .keyboardShortcut("u", modifiers: .command)
-                .disabled(!isWriting || !workspace.editorIsFocused)
+                .disabled(!isWriting || !workspace.editorIsFocused || workspace.editorSelection.isEmpty)
 
             Button("Strikethrough") { workspace.toggleFormat(.strikethrough) }
                 .keyboardShortcut("x", modifiers: [.command, .shift])

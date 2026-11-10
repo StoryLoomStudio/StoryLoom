@@ -134,6 +134,10 @@ nonisolated enum InlineMarkup {
         span = trimming(span, in: text)
         guard span.length > 0 else { return nil }
 
+        if (text.substring(with: span).contains("\n") || text.substring(with: span).contains("\r")) {
+            return toggleAcrossLines(format, in: text, span: span)
+        }
+
         if let edit = removingMarkersInside(format, in: text, span: span) { return edit }
         if let edit = removingMarkersAround(format, in: text, span: span) { return edit }
 
@@ -190,13 +194,14 @@ nonisolated enum InlineMarkup {
         if hasTrailingNewline, lines.count > 1, lines.last?.isEmpty == true { lines.removeLast() }
 
         let marker = level > 0 ? String(repeating: "#", count: min(level, 6)) + " " : ""
+        let headingPrefix = try! NSRegularExpression(pattern: #"^( {0,3})(#{1,6})[ \t]+"#)
         let rewritten = lines.map { line -> String in
-            var body = line
-            // Strip whatever heading it already was, so levels replace rather
-            // than stack into `## # Title`.
-            while body.hasPrefix("#") { body.removeFirst() }
-            if body.hasPrefix(" ") { body.removeFirst() }
-            return body.isEmpty && marker.isEmpty ? "" : marker + body
+            let lineNS = line as NSString
+            let range = NSRange(location: 0, length: lineNS.length)
+            let match = headingPrefix.firstMatch(in: line, range: range)
+            let indent = match.map { lineNS.substring(with: $0.range(at: 1)) } ?? ""
+            let body = match.map { lineNS.substring(from: NSMaxRange($0.range)) } ?? line
+            return body.isEmpty && marker.isEmpty ? indent : indent + marker + body
         }
         let replacement = rewritten.joined(separator: "\n") + (hasTrailingNewline ? "\n" : "")
         return TextEdit(
@@ -215,23 +220,29 @@ nonisolated enum InlineMarkup {
         var lines = block.components(separatedBy: "\n")
         if hasTrailingNewline, lines.count > 1, lines.last?.isEmpty == true { lines.removeLast() }
 
-        let existing = try! NSRegularExpression(pattern: #"^(\s*)(?:\d+[.)]|[-*+])\s+"#)
+        let existing = try! NSRegularExpression(pattern: #"^(\s*)(?:(\d+)[.)]|([-*+]))\s+"#)
         func stripped(_ line: String) -> String {
             let range = NSRange(location: 0, length: (line as NSString).length)
             guard let match = existing.firstMatch(in: line, range: range) else { return line }
             return (line as NSString).replacingCharacters(in: match.range, with: (line as NSString).substring(with: match.range(at: 1)))
         }
 
-        let alreadyList = lines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
-            .allSatisfy { existing.firstMatch(in: $0, range: NSRange(location: 0, length: ($0 as NSString).length)) != nil }
+        let nonBlank = lines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        let alreadyRequestedType = !nonBlank.isEmpty && nonBlank.allSatisfy { line in
+            let range = NSRange(location: 0, length: (line as NSString).length)
+            guard let match = existing.firstMatch(in: line, range: range) else { return false }
+            return (match.range(at: 2).location != NSNotFound) == ordered
+        }
 
         var number = 0
         let rewritten = lines.map { line -> String in
             let bare = stripped(line)
-            if alreadyList { return bare }
+            if alreadyRequestedType { return bare }
             if bare.trimmingCharacters(in: .whitespaces).isEmpty { return bare }
             number += 1
-            return ordered ? "\(number). " + bare : "- " + bare
+            let indentation = String(bare.prefix { $0 == " " || $0 == "\t" })
+            let content = String(bare.dropFirst(indentation.count))
+            return indentation + (ordered ? "\(number). " : "- ") + content
         }
         let replacement = rewritten.joined(separator: "\n") + (hasTrailingNewline ? "\n" : "")
         return TextEdit(
@@ -269,6 +280,64 @@ nonisolated enum InlineMarkup {
 
     private static func isNewline(_ character: unichar) -> Bool {
         character == 0x0A || character == 0x0D
+    }
+
+    /// Inline delimiters cannot enclose physical newlines. Apply the toggle to
+    /// each selected line fragment and submit the result as one undoable edit.
+    private static func toggleAcrossLines(_ format: InlineFormat, in text: NSString, span: NSRange) -> TextEdit? {
+        let end = NSMaxRange(span)
+        var fragments: [NSRange] = []
+        var lineStart = span.location
+        var cursor = span.location
+        while cursor <= end {
+            if cursor == end || isNewline(text.character(at: cursor)) {
+                let fragment = trimming(NSRange(location: lineStart, length: cursor - lineStart), in: text)
+                if fragment.length > 0 { fragments.append(fragment) }
+                if cursor == end { break }
+                cursor += 1
+                if text.character(at: cursor - 1) == 0x0D, cursor < end, text.character(at: cursor) == 0x0A { cursor += 1 }
+                lineStart = cursor
+            } else {
+                cursor += 1
+            }
+        }
+        guard !fragments.isEmpty else { return nil }
+
+        let formatted = fragments.map {
+            removingMarkersInside(format, in: text, span: $0) != nil
+                || removingMarkersAround(format, in: text, span: $0) != nil
+        }
+        let removeAll = formatted.allSatisfy { $0 }
+        var edits: [TextEdit] = []
+        for (index, fragment) in fragments.enumerated() {
+            if removeAll {
+                if let edit = removingMarkersInside(format, in: text, span: fragment)
+                    ?? removingMarkersAround(format, in: text, span: fragment) { edits.append(edit) }
+            } else if !formatted[index] {
+                edits.append(TextEdit(
+                    range: fragment,
+                    replacement: format.marker + text.substring(with: fragment) + format.marker,
+                    selection: NSRange(location: fragment.location, length: fragment.length + 2 * format.width)
+                ))
+            }
+        }
+        guard !edits.isEmpty else { return nil }
+
+        let changed = NSMutableString(string: text as String)
+        for edit in edits.sorted(by: { $0.range.location > $1.range.location }) {
+            changed.replaceCharacters(in: edit.range, with: edit.replacement)
+        }
+        let updated = changed as String
+        let updatedNS = updated as NSString
+        var prefix = 0
+        while prefix < text.length, prefix < updatedNS.length, text.character(at: prefix) == updatedNS.character(at: prefix) { prefix += 1 }
+        var suffix = 0
+        while suffix < text.length - prefix, suffix < updatedNS.length - prefix,
+              text.character(at: text.length - suffix - 1) == updatedNS.character(at: updatedNS.length - suffix - 1) { suffix += 1 }
+        let range = NSRange(location: prefix, length: text.length - prefix - suffix)
+        let replacement = updatedNS.substring(with: NSRange(location: prefix, length: updatedNS.length - prefix - suffix))
+        return TextEdit(range: range, replacement: replacement,
+                        selection: NSRange(location: prefix, length: updatedNS.length - prefix - suffix))
     }
 
     // MARK: Removal

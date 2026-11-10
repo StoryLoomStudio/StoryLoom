@@ -35,11 +35,6 @@ nonisolated enum MarkdownInput {
     )
     private static let leadingWhitespace = try! NSRegularExpression(pattern: #"^\s*"#)
 
-    /// How deep a list item sits, counting a tab or two spaces as one level.
-    private static func indentLevel(of whitespace: String) -> Int {
-        whitespace.filter { $0 == "\t" }.count + whitespace.filter { $0 == " " }.count / 2
-    }
-
     private static let maximumNesting = 8
 
     /// What the editor should do about `replacement` at `range`.
@@ -68,7 +63,7 @@ nonisolated enum MarkdownInput {
         _ = match
         if let ws = leadingWhitespace.firstMatch(in: lineText, range: full) {
             let whitespace = (lineText as NSString).substring(with: ws.range)
-            guard indentLevel(of: whitespace) < maximumNesting else {
+            guard MarkdownIndent.level(of: whitespace) < maximumNesting else {
                 return TextEdit(range: NSRange(location: caret, length: 0), replacement: "",
                                 selection: NSRange(location: caret, length: 0))
             }

@@ -433,56 +433,47 @@ nonisolated enum HTMLToMarkdownConverter {
         }
     }
 
-    /// Backslash-escapes markdown-significant characters in a TEXT node so pasted
-    /// literal text does not re-parse as markdown. Conservative: only a leading
-    /// block marker at the start of the run, plus inline emphasis/code/link
-    /// delimiters, are escaped. Code spans/fences bypass this (they use rawText).
+    /// Backslash-escapes Markdown syntax in a TEXT node so literal clipboard text
+    /// cannot turn into emphasis, math, tables, lists, or block structure. Semantic
+    /// HTML elements add their own Markdown in the renderers; only text nodes pass
+    /// through here. Code spans/fences bypass this and use rawText.
     private static func escapeMarkdown(_ s: String) -> String {
         guard !s.isEmpty else { return s }
         let chars = Array(s)
-        var out = ""
-        var i = 0
+        var escaped = Set<Int>()
 
-        // Leading block marker (treat the run's start as a potential line start).
-        if chars[0] == "#" {
-            var hashes = 0
-            while hashes < chars.count, hashes < 6, chars[hashes] == "#" { hashes += 1 }
-            if hashes < chars.count, chars[hashes] == " " {
-                out.append("\\#")
-                i = 1
+        // Mark the first structural character on every physical line, allowing
+        // up to three leading spaces as CommonMark does.
+        var lineStart = 0
+        while lineStart < chars.count {
+            var marker = lineStart
+            var spaces = 0
+            while marker < chars.count, chars[marker] == " ", spaces < 4 { marker += 1; spaces += 1 }
+            if spaces <= 3, marker < chars.count {
+                if chars[marker] == "#" || chars[marker] == ">" || chars[marker] == "-" || chars[marker] == "+" {
+                    escaped.insert(marker)
+                } else if chars[marker].isNumber {
+                    var punctuation = marker
+                    while punctuation < chars.count, chars[punctuation].isNumber { punctuation += 1 }
+                    if punctuation < chars.count, chars[punctuation] == "." || chars[punctuation] == ")" {
+                        let next = punctuation + 1
+                        if next == chars.count || chars[next].isWhitespace { escaped.insert(punctuation) }
+                    }
+                }
             }
-        } else if chars[0] == ">" {
-            out.append("\\>")
-            i = 1
-        } else if chars[0] == "-" || chars[0] == "*" || chars[0] == "+" {
-            if chars.count > 1, chars[1] == " " {
-                out.append("\\")
-                out.append(chars[0])
-                i = 1
-            }
-        } else if chars[0].isNumber {
-            var d = 0
-            while d < chars.count, chars[d].isNumber { d += 1 }
-            if d < chars.count, chars[d] == "." || chars[d] == ")",
-               d + 1 == chars.count || chars[d + 1] == " " {
-                for k in 0..<d { out.append(chars[k]) }
-                out.append("\\")
-                out.append(chars[d])
-                i = d + 1
-            }
+            while lineStart < chars.count, chars[lineStart] != "\n" && chars[lineStart] != "\r" { lineStart += 1 }
+            if lineStart < chars.count, chars[lineStart] == "\r", lineStart + 1 < chars.count, chars[lineStart + 1] == "\n" { lineStart += 2 }
+            else if lineStart < chars.count { lineStart += 1 }
         }
 
-        // Inline delimiters, anywhere in the run.
-        while i < chars.count {
-            let c = chars[i]
-            switch c {
-            case "*", "_", "`", "[", "]":
-                out.append("\\")
-                out.append(c)
-            default:
-                out.append(c)
+        var out = ""
+        for (index, character) in chars.enumerated() {
+            if escaped.contains(index) { out.append("\\") }
+            switch character {
+            case "*", "_", "`", "[", "]", "~", "=", "$", "\\", "|": out.append("\\")
+            default: break
             }
-            i += 1
+            out.append(character)
         }
         return out
     }

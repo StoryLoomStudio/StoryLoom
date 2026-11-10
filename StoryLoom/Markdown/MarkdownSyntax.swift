@@ -19,6 +19,13 @@
 
 import Foundation
 
+/// Shared interpretation of list indentation for parsing and keyboard input.
+nonisolated enum MarkdownIndent {
+    static func level(of whitespace: String) -> Int {
+        whitespace.filter { $0 == "\t" }.count + whitespace.filter { $0 == " " }.count / 2
+    }
+}
+
 // MARK: - Syntax rules
 
 /// The syntax of a delimited inline span.

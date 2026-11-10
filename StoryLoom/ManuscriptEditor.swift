@@ -47,6 +47,7 @@ nonisolated struct EditorSelection: Equatable {
 nonisolated struct RevealRequest: Equatable {
     var token = UUID()
     var range: NSRange
+    var documentID: UUID? = nil
 }
 
 /// Edits the surrounding UI can ask the page to make. They go through AppKit's
@@ -79,6 +80,7 @@ nonisolated enum EditorCommand: Equatable {
 nonisolated struct EditorCommandRequest: Equatable {
     var token = UUID()
     var command: EditorCommand
+    var documentID: UUID? = nil
 }
 
 /// Text services the author controls. Autocorrect is deliberately absent: a
@@ -116,7 +118,10 @@ struct ManuscriptEditor: NSViewRepresentable {
     /// re-apply it after every restyle, and handed back up whenever an edit
     /// moves it, so the model can save it.
     var presentation = PresentationLayer()
-    var onPresentationChange: ((PresentationLayer) -> Void)?
+    var onPresentationChange: ((UUID, PresentationLayer) -> Void)?
+    var onPresentationEdit: ((UUID, PresentationLayer, PresentationLayer) -> Void)?
+    var onCommandConsumed: ((UUID) -> Void)?
+    var onRevealConsumed: ((UUID) -> Void)?
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -154,6 +159,9 @@ struct ManuscriptEditor: NSViewRepresentable {
         textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
         textView.textContainerInset = NSSize(width: 0, height: 0)
         textView.delegate = context.coordinator
+        textView.isCodeBlockAt = { [weak coordinator = context.coordinator] in
+            coordinator?.isCodeBlock(at: $0) ?? false
+        }
         textView.onCommentRequest = { [weak coordinator = context.coordinator] range in
             coordinator?.parent.onCommentRequest?(range)
         }
@@ -205,6 +213,12 @@ struct ManuscriptEditor: NSViewRepresentable {
             coordinator.replaceTextPreservingCaret(with: text)
         }
 
+        if coordinator.presentation != presentation {
+            coordinator.presentation = presentation
+            coordinator.restyleEverything()
+            alreadyRefreshed = true
+        }
+
         if coordinator.style != style {
             coordinator.apply(style: style)
             alreadyRefreshed = true
@@ -223,6 +237,7 @@ struct ManuscriptEditor: NSViewRepresentable {
 
     static func dismantleNSView(_ scrollView: ManuscriptScrollView, coordinator: Coordinator) {
         coordinator.cancelPendingDecorationRefresh()
+        coordinator.discardTextUndoActions()
         coordinator.parent.isFocused = false
         NotificationCenter.default.removeObserver(coordinator)
     }
@@ -250,6 +265,7 @@ struct ManuscriptEditor: NSViewRepresentable {
 
         /// Guards the binding from echoing programmatic edits back into the model.
         private var isLoading = false
+        private var markdownBlocks: [MarkdownBlock] = []
         private var lastRevealToken: UUID?
         private var lastCommandToken: UUID?
         private var revealRange: NSRange?
@@ -273,6 +289,11 @@ struct ManuscriptEditor: NSViewRepresentable {
             self.scrollView = scrollView
         }
 
+        func discardTextUndoActions() {
+            guard let textView else { return }
+            textView.undoManager?.removeAllActions(withTarget: textView)
+        }
+
         // MARK: Loading
 
         func load(text: String, documentID: UUID) {
@@ -280,18 +301,23 @@ struct ManuscriptEditor: NSViewRepresentable {
             isLoading = true
             self.documentID = documentID
             commentsNeedResolve = true
+            rebuildMarkdownBlocks(for: text)
             // Offsets from a previous session may be stale — the file could have
             // been edited elsewhere — so every span re-finds its words here, and
             // any that cannot are dropped rather than guessed at.
-            presentation = parent.presentation
+            let storedPresentation = parent.presentation
+            presentation = storedPresentation
             presentation.reanchor(in: text)
             storage.setAttributedString(NSAttributedString(string: text, attributes: ProseStyler.typingAttributes(style)))
             restyleEverything()
             textView.setSelectedRange(NSRange(location: 0, length: 0))
-            textView.undoManager?.removeAllActions()
+            textView.undoManager?.removeAllActions(withTarget: textView)
             scrollView?.contentView.scroll(to: NSPoint(x: 0, y: -(scrollView?.contentInsets.top ?? 0)))
             scrollView.map { $0.reflectScrolledClipView($0.contentView) }
             isLoading = false
+            if presentation != storedPresentation {
+                parent.onPresentationChange?(documentID, presentation)
+            }
             refreshDecorations()
             reportSelection()
         }
@@ -301,6 +327,7 @@ struct ManuscriptEditor: NSViewRepresentable {
         func replaceTextPreservingCaret(with text: String) {
             guard let textView, let storage = textView.textStorage else { return }
             isLoading = true
+            rebuildMarkdownBlocks(for: text)
             let caret = textView.selectedRange()
             presentation = parent.presentation
             presentation.reanchor(in: text)
@@ -308,9 +335,12 @@ struct ManuscriptEditor: NSViewRepresentable {
             restyleEverything()
             textView.setSelectedRange(caret.clamped(to: (text as NSString).length))
             isLoading = false
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.parent.onPresentationChange?(self.presentation)
+            let replacementPresentation = presentation
+            if let replacedDocumentID = documentID {
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.parent.onPresentationChange?(replacedDocumentID, replacementPresentation)
+                }
             }
             refreshDecorations()
             reportSelection()
@@ -367,8 +397,16 @@ struct ManuscriptEditor: NSViewRepresentable {
         /// undoable with ⌘Z, coalesced with the typing around it, and restyled by
         /// the same delegate that handles a keystroke.
         func perform(command request: EditorCommandRequest?) {
-            guard let request, request.token != lastCommandToken, let textView else { return }
+            guard let request, request.token != lastCommandToken else { return }
             lastCommandToken = request.token
+            defer {
+                Task { @MainActor [weak self] in
+                    await Task.yield()
+                    self?.parent.onCommandConsumed?(request.token)
+                }
+            }
+            guard request.documentID == nil || request.documentID == documentID else { return }
+            guard let textView else { return }
 
             let string = textView.string as NSString
             let selection = textView.selectedRange()
@@ -420,13 +458,16 @@ struct ManuscriptEditor: NSViewRepresentable {
         ) {
             guard let textView else { return }
             let text = textView.string
+            let before = presentation
             var range = textView.selectedRange()
             if range.length == 0 {
                 guard !requiresSelection else { return }
                 range = (text as NSString).paragraphRange(for: range)
             }
             change(&presentation, range, text)
-            parent.onPresentationChange?(presentation)
+            if let documentID, before != presentation {
+                parent.onPresentationEdit?(documentID, before, presentation)
+            }
             restyleEverything()
             refreshDecorations()
         }
@@ -439,14 +480,98 @@ struct ManuscriptEditor: NSViewRepresentable {
             textView.setSelectedRange(edit.selection.clamped(to: (textView.string as NSString).length))
         }
 
-        private func restyleEverything() {
+        func restyleEverything() {
             guard let textView, let storage = textView.textStorage else { return }
             ProseStyler.applyAttributes(
                 to: storage,
                 range: NSRange(location: 0, length: storage.length),
                 style: style,
-                presentation: presentation
+                presentation: presentation,
+                precomputedBlocks: markdownBlocks
             )
+        }
+
+        private func rebuildMarkdownBlocks(for text: String) {
+            markdownBlocks = text.isEmpty ? [] : BlockParser.parse(text, registry: .manuscript)
+        }
+
+        func isCodeBlock(at location: Int) -> Bool {
+            markdownBlocks.contains { $0.kind == .fencedCode && NSLocationInRange(location, $0.range) }
+        }
+
+        /// Most character edits inside a paragraph only change its length. Keep
+        /// the block map and shift it in O(number of blocks); reparse when a line
+        /// boundary or a block's syntax may have changed.
+        private func updateMarkdownBlocks(text: String, editedRange: NSRange, delta: Int) {
+            let ns = text as NSString
+            guard ns.length > 0 else { markdownBlocks = []; return }
+            guard !markdownBlocks.isEmpty, ns.length - delta >= 0 else {
+                rebuildMarkdownBlocks(for: text)
+                return
+            }
+
+            let oldLength = ns.length - delta
+            let start = min(max(0, editedRange.location), oldLength)
+            let removedLength = max(0, editedRange.length - delta)
+            let oldRange = NSRange(location: start, length: min(removedLength, oldLength - start))
+            let oldEnd = NSMaxRange(oldRange)
+            guard let blockIndex = markdownBlocks.firstIndex(where: {
+                $0.range.location <= start && start <= NSMaxRange($0.range)
+            }) else {
+                rebuildMarkdownBlocks(for: text)
+                return
+            }
+            let block = markdownBlocks[blockIndex]
+            let newStart = min(editedRange.location, ns.length)
+            let line = ns.lineRange(for: NSRange(location: newStart, length: 0))
+            let lineText = ns.substring(with: line)
+            let localKind = BlockParser.computeBlocks(lineText, registry: .manuscript).first?.kind
+            let changed = ns.substring(with: editedRange.clamped(to: ns.length))
+            let containsLineBreak = changed.contains("\n") || changed.contains("\r")
+            let isBlockBoundary = start == block.range.location || oldEnd == NSMaxRange(block.range)
+            var needsFullParse = containsLineBreak || isBlockBoundary
+
+            switch block.kind {
+            case .fencedCode:
+                // Code body text cannot affect block structure. The opening or
+                // closing fence line can, including deletion of its marker.
+                let isFenceLine = line.location == block.range.location || NSMaxRange(line) >= NSMaxRange(block.range)
+                needsFullParse = needsFullParse || isFenceLine
+            case .blockLatex:
+                needsFullParse = needsFullParse || localKind != .paragraph || changed.contains("$")
+            case .ext:
+                needsFullParse = needsFullParse || localKind != .paragraph
+            default:
+                needsFullParse = needsFullParse || localKind != block.kind
+            }
+
+            if needsFullParse {
+                rebuildMarkdownBlocks(for: text)
+                return
+            }
+
+            var updated: [MarkdownBlock] = []
+            updated.reserveCapacity(markdownBlocks.count)
+            for (index, old) in markdownBlocks.enumerated() {
+                if index == blockIndex {
+                    let length = old.range.length + delta
+                    guard length > 0 else { rebuildMarkdownBlocks(for: text); return }
+                    updated.append(MarkdownBlock(kind: old.kind,
+                                                 range: NSRange(location: old.range.location, length: length)))
+                } else if old.range.location >= oldEnd {
+                    updated.append(MarkdownBlock(kind: old.kind,
+                                                 range: NSRange(location: old.range.location + delta, length: old.range.length)))
+                } else {
+                    updated.append(old)
+                }
+            }
+            var cursor = 0
+            for item in updated {
+                guard item.range.location == cursor else { rebuildMarkdownBlocks(for: text); return }
+                cursor = NSMaxRange(item.range)
+            }
+            guard cursor == ns.length else { rebuildMarkdownBlocks(for: text); return }
+            markdownBlocks = updated
         }
 
         // MARK: Geometry
@@ -603,8 +728,16 @@ struct ManuscriptEditor: NSViewRepresentable {
         // MARK: Reveal
 
         func perform(reveal request: RevealRequest?) {
-            guard let request, request.token != lastRevealToken, let textView else { return }
+            guard let request, request.token != lastRevealToken else { return }
             lastRevealToken = request.token
+            defer {
+                Task { @MainActor [weak self] in
+                    await Task.yield()
+                    self?.parent.onRevealConsumed?(request.token)
+                }
+            }
+            guard request.documentID == nil || request.documentID == documentID else { return }
+            guard let textView else { return }
 
             let full = (textView.string as NSString).length
             let range = request.range.clamped(to: full)
@@ -793,17 +926,21 @@ struct ManuscriptEditor: NSViewRepresentable {
         ) {
             guard editedMask.contains(.editedCharacters) else { return }
             MainActor.assumeIsolated {
+                guard !isLoading else { return }
+                updateMarkdownBlocks(text: textStorage.string, editedRange: editedRange, delta: delta)
                 // Move the presentation spans through this edit first: the restyle
                 // below re-applies them, and it has to be given the new positions,
                 // not last keystroke's.
+                let string = textStorage.string
                 if !presentation.isEmpty {
-                    presentation.adjust(editedRange: editedRange, delta: delta)
-                    parent.onPresentationChange?(presentation)
+                    presentation.adjust(editedRange: editedRange, delta: delta, in: string)
+                    if let documentID { parent.onPresentationChange?(documentID, presentation) }
                 }
-                let string = textStorage.string as NSString
-                let paragraphs = string.paragraphRange(for: editedRange.clamped(to: string.length))
+                let ns = string as NSString
+                let paragraphs = ns.paragraphRange(for: editedRange.clamped(to: ns.length))
                 ProseStyler.applyAttributes(to: textStorage, range: paragraphs, style: style,
-                                            presentation: presentation, wrapInEditing: false)
+                                            presentation: presentation, wrapInEditing: false,
+                                            precomputedBlocks: markdownBlocks)
             }
         }
 
@@ -816,6 +953,7 @@ final class ManuscriptTextView: NSTextView {
     var onCommentRequest: ((NSRange) -> Void)?
     var onFormat: ((InlineFormat) -> Void)?
     var onCreateRecord: ((String) -> Void)?
+    var isCodeBlockAt: ((Int) -> Bool)?
 
     /// Held here because the quote rules are drawn here. Under TextKit 1 this
     /// lived on a layout-manager subclass, which was the natural home for
@@ -845,8 +983,10 @@ final class ManuscriptTextView: NSTextView {
         let barColor = style.inkColor.withAlphaComponent(0.30)
         let origin = textContainerOrigin
 
+        let visibleStart = layoutManager.textViewportLayoutController.viewportRange?.location
+            ?? layoutManager.documentRange.location
         layoutManager.enumerateTextLayoutFragments(
-            from: layoutManager.documentRange.location,
+            from: visibleStart,
             options: [.ensuresLayout]
         ) { fragment in
             var frame = fragment.layoutFragmentFrame
@@ -1135,11 +1275,7 @@ final class ManuscriptTextView: NSTextView {
     /// Asked of the parser rather than guessed at, so a `-` inside ``` fences is
     /// left alone for the same reason the styler leaves it alone.
     private func isInsideCodeBlock(at location: Int) -> Bool {
-        let text = string
-        guard text.contains("`") else { return false }
-        return BlockParser.parse(text, registry: .manuscript).contains { block in
-            block.kind == .fencedCode && NSLocationInRange(location, block.range)
-        }
+        isCodeBlockAt?(location) ?? false
     }
 
     override func deleteBackward(_ sender: Any?) {

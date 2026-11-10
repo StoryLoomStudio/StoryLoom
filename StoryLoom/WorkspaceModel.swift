@@ -96,9 +96,29 @@ final class WorkspaceModel: ObservableObject {
         selectedDocumentID.flatMap { presentation[$0] } ?? PresentationLayer()
     }
 
-    func updatePresentation(_ layer: PresentationLayer) {
-        guard let id = selectedDocumentID else { return }
-        if layer.isEmpty { presentation.removeValue(forKey: id) } else { presentation[id] = layer }
+    func updatePresentation(_ layer: PresentationLayer, for documentID: UUID) {
+        storePresentation(layer, for: documentID)
+    }
+
+    func editPresentation(documentID: UUID, before: PresentationLayer, after: PresentationLayer) {
+        guard before != after else { return }
+        storePresentation(after, for: documentID)
+        registerPresentationUndo("Format Selection", documentID: documentID, restoring: before)
+    }
+
+    func consumeEditorCommand(_ token: UUID) {
+        guard editorCommand?.token == token else { return }
+        editorCommand = nil
+    }
+
+    func consumeReveal(_ token: UUID) {
+        guard reveal?.token == token else { return }
+        reveal = nil
+    }
+
+    private func storePresentation(_ layer: PresentationLayer, for documentID: UUID) {
+        if layer.isEmpty { presentation.removeValue(forKey: documentID) }
+        else { presentation[documentID] = layer }
         scheduleAutosave()
     }
     @Published var isInspectorVisible = false
@@ -1000,17 +1020,17 @@ final class WorkspaceModel: ObservableObject {
     /// means that word, and the editor works that out for itself.
     func toggleFormat(_ format: InlineFormat) {
         guard library == .manuscript, selectedDocumentID != nil else { return }
-        editorCommand = EditorCommandRequest(command: .format(format))
+        editorCommand = EditorCommandRequest(command: .format(format), documentID: selectedDocumentID)
     }
 
     func toggleBlockquote() {
         guard library == .manuscript, selectedDocument != nil else { return }
-        editorCommand = EditorCommandRequest(command: .blockquote)
+        editorCommand = EditorCommandRequest(command: .blockquote, documentID: selectedDocumentID)
     }
 
     func insertSceneBreak() {
         guard library == .manuscript, selectedDocumentID != nil else { return }
-        editorCommand = EditorCommandRequest(command: .sceneBreak)
+        editorCommand = EditorCommandRequest(command: .sceneBreak, documentID: selectedDocumentID)
     }
 
     /// Highlighting is emphasis by another name — `==like this==` — so it goes the
@@ -1021,15 +1041,15 @@ final class WorkspaceModel: ObservableObject {
 
     func setHeading(_ level: Int) { send(.heading(level)) }
     func toggleList(ordered: Bool) { send(.list(ordered: ordered)) }
-    func toggleUnderline() { send(.underline) }
-    func setHighlightColour(_ colour: HighlightColour?) { send(.highlight(colour)) }
+    func toggleUnderline() { guard !editorSelection.isEmpty else { return }; send(.underline) }
+    func setHighlightColour(_ colour: HighlightColour?) { guard !editorSelection.isEmpty else { return }; send(.highlight(colour)) }
     func setAlignment(_ alignment: TextAlignmentChoice) { send(.alignment(alignment)) }
-    func setFace(_ name: String?) { send(.face(name)) }
-    func setFontSize(_ points: Double?) { send(.size(points)) }
+    func setFace(_ name: String?) { guard !editorSelection.isEmpty else { return }; send(.face(name)) }
+    func setFontSize(_ points: Double?) { guard !editorSelection.isEmpty else { return }; send(.size(points)) }
 
     private func send(_ command: EditorCommand) {
         guard library == .manuscript, selectedDocumentID != nil else { return }
-        editorCommand = EditorCommandRequest(command: command)
+        editorCommand = EditorCommandRequest(command: command, documentID: selectedDocumentID)
     }
 
     // MARK: - Threads
@@ -1165,7 +1185,7 @@ final class WorkspaceModel: ObservableObject {
         library = .manuscript
         selectedDocumentID = document.id
         guard let range = comment.anchor.resolve(in: document.text) else { return }
-        reveal = RevealRequest(range: range)
+        reveal = RevealRequest(range: range, documentID: document.id)
     }
 
     // MARK: - Story records
@@ -1432,7 +1452,7 @@ final class WorkspaceModel: ObservableObject {
         case .document(let id, let range):
             library = .manuscript
             selectedDocumentID = id
-            if let range { reveal = RevealRequest(range: range) }
+            if let range { reveal = RevealRequest(range: range, documentID: id) }
         case .thread(let id):
             library = .threads
             selectedThreadID = id
@@ -1459,7 +1479,7 @@ final class WorkspaceModel: ObservableObject {
         case .document(let id, let range):
             library = .manuscript
             selectedDocumentID = id
-            if let range { reveal = RevealRequest(range: range) }
+            if let range { reveal = RevealRequest(range: range, documentID: id) }
         case .thread(let id):
             library = .threads
             selectedThreadID = id
@@ -2190,6 +2210,18 @@ final class WorkspaceModel: ObservableObject {
                 model.registerUndo(actionName, restoring: current)
                 model.scheduleAutosave()
                 model.scheduleReindex()
+            }
+        }
+        undoManager.setActionName(actionName)
+    }
+
+    private func registerPresentationUndo(_ actionName: String, documentID: UUID, restoring previous: PresentationLayer) {
+        guard let undoManager else { return }
+        undoManager.registerUndo(withTarget: self) { model in
+            MainActor.assumeIsolated {
+                let current = model.presentation[documentID] ?? PresentationLayer()
+                model.storePresentation(previous, for: documentID)
+                model.registerPresentationUndo(actionName, documentID: documentID, restoring: current)
             }
         }
         undoManager.setActionName(actionName)

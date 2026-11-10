@@ -19,7 +19,7 @@
 //  styler perform, so block ranges line up with today's tokens:
 //    • heading        — headingRegex        `^\s*#{1,6} +…`
 //    • thematic break — styler HR pattern   `^\s*(-{3,}|\*{3,}|_{3,})\s*$`
-//    • fenced code    — codeBlockRegex       opening/closing ``` line
+//    • fenced code    — CommonMark backtick/tilde fences, including unclosed blocks
 //    • blockquote     — blockquoteRegex     `^[ \t]{0,3}(>…)`
 //
 
@@ -128,7 +128,8 @@ nonisolated enum BlockParser {
         return BufferDiff(changeStart: p, changeEndOld: oldLen - s, changeEndNew: newLen - s, delta: newLen - oldLen)
     }
 
-    /// Does any LINE touched by `[lo, hi)` contain a `$$` or ``` that can ripple?
+    /// Does any LINE touched by `[lo, hi)` contain `$$`, a code fence, or an
+    /// extension fence that can ripple?
     /// Line-expanded, not just ±3 around the edit: block delimiters are
     /// line-classified with a TRIMMED prefix (`isBlockLatexOpen`), so editing
     /// the leading whitespace of an indented `$$` opener flips the pairing
@@ -154,8 +155,9 @@ nonisolated enum BlockParser {
         while i < end {
             if buf[i] == 0x24 {                                          // $
                 if i + 1 < end, buf[i + 1] == 0x24 { return true }       // $$
-            } else if buf[i] == 0x60, i + 2 < end, buf[i + 1] == 0x60, buf[i + 2] == 0x60 {
-                return true                                              // ```
+            } else if (buf[i] == 0x60 || buf[i] == 0x7E), i + 2 < end,
+                      buf[i + 1] == buf[i], buf[i + 2] == buf[i] {
+                return true                                              // ``` or ~~~
             }
             // Extension fences pair with a distant partner exactly like ``` —
             // an edit touching one must force the full reparse too.
@@ -277,14 +279,15 @@ nonisolated enum BlockParser {
 
         func lineText(_ i: Int) -> String { nsText.substring(with: lines[i]) }
 
-        /// Line index of the fence closing a code block opened at `start`; nil when unclosed.
+        /// Matching closing line, or EOF for an unclosed opener.
         func fenceCloseIndex(from start: Int) -> Int? {
+            guard let opener = fenceOpening(lineText(start)) else { return nil }
             var scan = start + 1
             while scan < lines.count {
-                if isFence(lineText(scan)) { return scan }
+                if isFenceClose(lineText(scan), matching: opener) { return scan }
                 scan += 1
             }
-            return nil
+            return lines.count - 1
         }
 
         /// Line index of the `$$` closing a block-LaTeX run opened at `start`; nil if none.
@@ -366,10 +369,8 @@ nonisolated enum BlockParser {
                     let next = lineText(end + 1)
                     if isBlank(next) || isThematicBreak(next)
                         || isHeading(next) || isBlockquote(next) || isListItem(next) { break }
-                    // A table (row + separator), a CLOSED code fence, a
-                    // block-LaTeX run, or an extension fence interrupts it —
-                    // an unclosed opener stays part of the paragraph.
-                    if isFence(next), fenceCloseIndex(from: end + 1) != nil { break }
+                    // An unclosed fence is valid Markdown and consumes through EOF.
+                    if isFence(next) { break }
                     if isTableRow(next), end + 2 < lines.count, isTableSeparator(lineText(end + 2)) { break }
                     if isBlockLatexOpen(next), blockLatexCloseIndex(from: end + 1) != nil { break }
                     if registry.blockEntry(opening: next) != nil { break }
@@ -388,9 +389,40 @@ nonisolated enum BlockParser {
         line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// An opening or closing fence line: starts with three backticks.
+    private struct FenceMarker {
+        let character: Character
+        let length: Int
+    }
+
+    /// A fenced block opener: up to three spaces, then at least three backticks
+    /// or tildes. Backtick info strings cannot themselves contain backticks.
+    private static func fenceOpening(_ line: String) -> FenceMarker? {
+        let content = line.trimmingCharacters(in: .newlines)
+        var rest = Substring(content)
+        var indent = 0
+        while indent < 4, rest.first == " " { rest = rest.dropFirst(); indent += 1 }
+        guard indent <= 3, let marker = rest.first, marker == "`" || marker == "~" else { return nil }
+        var length = 0
+        while rest.first == marker { rest = rest.dropFirst(); length += 1 }
+        guard length >= 3 else { return nil }
+        if marker == "`", rest.contains("`") { return nil }
+        return FenceMarker(character: marker, length: length)
+    }
+
     private static func isFence(_ line: String) -> Bool {
-        line.hasPrefix("```")
+        fenceOpening(line) != nil
+    }
+
+    private static func isFenceClose(_ line: String, matching opener: FenceMarker) -> Bool {
+        let content = line.trimmingCharacters(in: .newlines)
+        var rest = Substring(content)
+        var indent = 0
+        while indent < 4, rest.first == " " { rest = rest.dropFirst(); indent += 1 }
+        guard indent <= 3 else { return false }
+        var length = 0
+        while rest.first == opener.character { rest = rest.dropFirst(); length += 1 }
+        guard length >= opener.length else { return false }
+        return rest.allSatisfy { $0 == " " || $0 == "\t" }
     }
 
     /// `^\s*(-{3,}|\*{3,}|_{3,})\s*$` — a solid run of 3+ of one of `- * _`.

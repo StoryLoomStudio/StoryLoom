@@ -207,8 +207,9 @@ nonisolated enum DocumentAST {
     private static func listItem(_ lineRange: NSRange, _ ns: NSString, scoped: Bool = true, registry: ExtensionRegistry = .empty) -> ListItem {
         let end = NSMaxRange(lineRange)
         var i = lineRange.location
-        var indent = 0
-        while i < end, ns.character(at: i) == space || ns.character(at: i) == tab { i += 1; indent += 1 }
+        while i < end, ns.character(at: i) == space || ns.character(at: i) == tab { i += 1 }
+        let indentation = ns.substring(with: NSRange(location: lineRange.location, length: i - lineRange.location))
+        let indent = MarkdownIndent.level(of: indentation)
         let markerStart = i
         var ordered = false
         var number: Int?
