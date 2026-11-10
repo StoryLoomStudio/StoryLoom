@@ -22,7 +22,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		4648A13730040847006133F2 /* Exceptions for "StoryOS" folder in "StoryLoom" target */ = {
+		4648A13730040847006133F2 /* Exceptions for "StoryLoom" folder in "StoryLoom" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -32,17 +32,17 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		4648A12B30040846006133F2 /* StoryOS */ = {
+		4648A12B30040846006133F2 /* StoryLoom */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				4648A13730040847006133F2 /* Exceptions for "StoryOS" folder in "StoryLoom" target */,
+				4648A13730040847006133F2 /* Exceptions for "StoryLoom" folder in "StoryLoom" target */,
 			);
-			path = StoryOS;
+			path = StoryLoom;
 			sourceTree = "<group>";
 		};
-		A10000000000000000000002 /* StoryOSTests */ = {
+		A10000000000000000000002 /* StoryLoomTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = StoryOSTests;
+			path = StoryLoomTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -68,8 +68,8 @@
 		4648A12030040846006133F2 = {
 			isa = PBXGroup;
 			children = (
-				4648A12B30040846006133F2 /* StoryOS */,
-				A10000000000000000000002 /* StoryOSTests */,
+				4648A12B30040846006133F2 /* StoryLoom */,
+				A10000000000000000000002 /* StoryLoomTests */,
 				4648A12A30040846006133F2 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -99,7 +99,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				4648A12B30040846006133F2 /* StoryOS */,
+				4648A12B30040846006133F2 /* StoryLoom */,
 			);
 			name = StoryLoom;
 			packageProductDependencies = (
@@ -121,7 +121,7 @@
 				A1000000000000000000000A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				A10000000000000000000002 /* StoryOSTests */,
+				A10000000000000000000002 /* StoryLoomTests */,
 			);
 			name = StoryLoomTests;
 			packageProductDependencies = (
@@ -149,7 +149,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 4648A12430040846006133F2 /* Build configuration list for PBXProject "StoryOS" */;
+			buildConfigurationList = 4648A12430040846006133F2 /* Build configuration list for PBXProject "StoryLoom" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -330,7 +330,7 @@
 				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = StoryOS/StoryLoom.entitlements;
+				CODE_SIGN_ENTITLEMENTS = StoryLoom/StoryLoom.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -338,7 +338,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = StoryOS/Info.plist;
+				INFOPLIST_FILE = StoryLoom/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = StoryLoom;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -368,7 +368,7 @@
 				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = StoryOS/StoryLoom.entitlements;
+				CODE_SIGN_ENTITLEMENTS = StoryLoom/StoryLoom.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -377,7 +377,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = StoryOS/Info.plist;
+				INFOPLIST_FILE = StoryLoom/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = StoryLoom;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -445,7 +445,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		4648A12430040846006133F2 /* Build configuration list for PBXProject "StoryOS" */ = {
+		4648A12430040846006133F2 /* Build configuration list for PBXProject "StoryLoom" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4648A13230040847006133F2 /* Debug */,
