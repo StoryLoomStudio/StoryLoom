@@ -48,3 +48,8 @@ graphify-out/
 # Scratch
 *.log
 *.tmp
+
+.agents/
+.codex/
+.gemini/
+.impeccable/
